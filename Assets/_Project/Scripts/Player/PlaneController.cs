@@ -201,5 +201,31 @@ namespace SkyBrawl.Player
 
         /// <summary>Refill boost fuel to max. Called on respawn / map enter.</summary>
         public void RefillBoostFuel() => _currentBoostFuel = maxBoostFuel;
+
+        /// <summary>Sync the internal FlightState position to a new world position. Used by
+        /// the crash handler when it nudges the plane out of a wall during a slide so the
+        /// next FixedUpdate doesn't snap us back inside.</summary>
+        public void SyncStatePosition(Vector3 worldPos) => _state.position = worldPos;
+
+        /// <summary>Fully reset the flight state and place the plane at a new pose. Called
+        /// by the crash handler after a crash to respawn the plane at the airport.</summary>
+        public void RespawnAt(Vector3 pos, Quaternion rot)
+        {
+            transform.position = pos;
+            transform.rotation = rot;
+            _state.position = pos;
+            _state.rotation = rot;
+            _state.velocity = Vector3.zero;
+            _state.currentSpeed = tuning != null ? tuning.cruiseSpeed : 40f;
+            _state.smoothedPitch = 0f;
+            _state.smoothedYaw = 0f;
+            _state.smoothedRoll = 0f;
+            _currentBankAngle = 0f;
+            _mode = FlightMode.Normal;
+            _barrelRollElapsed = 0f;
+            externalYawBias = 0f;
+            if (visualRoot != null) visualRoot.localRotation = Quaternion.identity;
+            RefillBoostFuel();
+        }
     }
 }

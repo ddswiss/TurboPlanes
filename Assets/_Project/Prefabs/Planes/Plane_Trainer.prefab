@@ -43,6 +43,7 @@ GameObject:
   - component: {fileID: 2205348165594766997}
   - component: {fileID: 7510763841356200092}
   - component: {fileID: 5364360689028552461}
+  - component: {fileID: 2937777433230725778}
   m_Layer: 0
   m_Name: Plane_Trainer
   m_TagString: Player
@@ -110,9 +111,30 @@ MonoBehaviour:
   visualRoot: {fileID: 8862527718348129260}
   maxBankAngle: 35
   bankSmoothing: 6
-  _testHardTurnAsDefault: 1
   _bankEasingPower: 2
   _bankMinSpeed: 50
+  maxBoostFuel: 100
+  boostConsumeRate: 40
+  boostRegenRate: 18
+  externalYawBias: 0
+--- !u!114 &2937777433230725778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5528322230850146464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc940f77b7e17354081690f1d44582e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkyBrawl.Player.PlaneCrashHandler
+  hullRadius: 4
+  crashSpeedThreshold: 30
+  crashAngleCosThreshold: 0.4
+  respawnDelay: 3
+  crashVelocityScale: 1
+  crashTumbleSpin: 360
 --- !u!1001 &6928291704398949958
 PrefabInstance:
   m_ObjectHideFlags: 0
