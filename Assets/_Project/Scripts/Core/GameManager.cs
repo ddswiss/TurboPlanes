@@ -31,6 +31,8 @@ namespace SkyBrawl.Core
         private GameObject _activePlane;
         private MapDefinition _currentMap;
 
+        public bool IsHangarOpen => _hangarCanvas != null && _hangarCanvas.activeSelf;
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -120,7 +122,39 @@ namespace SkyBrawl.Core
                 Debug.LogWarning("[GameManager] No Camera.main in active scene; the plane spawned but will not be followed.");
             }
 
-            // TODO: apply runtime tuning clone with upgrades, apply player color.
+            // TODO: apply runtime tuning clone with upgrades.
+
+            // Apply the saved color for this plane to the freshly spawned instance.
+            var saveData = Profile.GetOrCreatePlaneData(Profile.selectedPlaneId);
+            ApplyColorToActivePlane(saveData.color);
+        }
+
+        public void SetSelectedPlane(string planeId)
+        {
+            if (planeCatalog == null) return;
+            var def = planeCatalog.GetById(planeId);
+            if (def == null) return;
+            Profile.selectedPlaneId = planeId;
+            Profile.Save();
+            // Re-spawn at the airport with the new prefab (re-applies color too).
+            SpawnSelectedPlane();
+        }
+
+        public void SetSelectedColor(Color color)
+        {
+            if (string.IsNullOrEmpty(Profile.selectedPlaneId)) return;
+            var saveData = Profile.GetOrCreatePlaneData(Profile.selectedPlaneId);
+            saveData.color = color;
+            Profile.Save();
+            ApplyColorToActivePlane(color);
+        }
+
+        private void ApplyColorToActivePlane(Color color)
+        {
+            if (_activePlane == null) return;
+            var painter = _activePlane.GetComponent<PlanePainter>();
+            if (painter == null) painter = _activePlane.AddComponent<PlanePainter>();
+            painter.Apply(color);
         }
 
         public void OpenHangar()
