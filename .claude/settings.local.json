@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__UnityMCP__find_gameobjects",
+      "mcp__UnityMCP__manage_scene",
+      "mcp__UnityMCP__read_console",
+      "Bash(LC_ALL=C grep -a -o -E \"Material[^\\\\\\\\x00]*\" \"Meshy_AI_Rainbow_Skyplane_0510150017_texture.fbx\")",
+      "mcp__UnityMCP__manage_asset",
+      "mcp__UnityMCP__manage_packages",
+      "mcp__UnityMCP__manage_gameobject",
+      "mcp__UnityMCP__manage_material",
+      "mcp__UnityMCP__refresh_unity",
+      "mcp__UnityMCP__execute_code",
+      "mcp__UnityMCP__manage_editor",
+      "mcp__UnityMCP__manage_prefabs",
+      "mcp__UnityMCP__manage_scriptable_object",
+      "mcp__UnityMCP__manage_build",
+      "mcp__UnityMCP__create_script",
+      "mcp__UnityMCP__manage_components",
+      "Bash(python -c ' *)",
+      "Bash([ -f \"$CFG\" ])",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git tag *)",
+      "Bash(gh auth *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git fetch *)",
+      "Bash(git ls-tree *)",
+      "Bash(git push *)",
+      "Bash(sort -k4 -n -r)",
+      "Bash(git checkout *)"
+    ]
+  }
+}

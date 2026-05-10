@@ -7,14 +7,12 @@ namespace SkyBrawl.Player
 {
     /// <summary>
     /// Drives a plane using the FlightModel and Unity's new Input System.
-    /// Attach to a plane GameObject. Assign a PlaneTuningSO in the inspector.
     ///
     /// CONTROL SCHEME (arcade):
     ///   W/S          -> pitch
-    ///   A/D          -> turn (yaw) + visual banking tilt
-    ///   Space/LCtrl  -> throttle (speed up / slow down)
-    ///   LShift+A/D   -> hard turn (tighter turn radius, ~90 deg visual bank)
-    ///   double-tap LShift while holding A/D -> barrel roll
+    ///   A/D          -> turn (yaw) + visual banking tilt to +/- maxBankAngle
+    ///   Space/LCtrl  -> throttle (speed up / slow down). Space consumes boost fuel.
+    ///   Shift+A/D    -> instant barrel roll left/right (heading locked, plane goes straight)
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     public class PlaneController : MonoBehaviour
@@ -30,17 +28,22 @@ namespace SkyBrawl.Player
         [Tooltip("How quickly the visual tilt eases in/out. Higher = snappier.")]
         [SerializeField] private float bankSmoothing = 6f;
 
-        [Header("TEMP TESTING")]
-        [Tooltip("If true, normal A/D behaves like Shift+A/D (90 deg bank, dynamic yaw multiplier). Shift+A/D and the barrel roll are disabled while this is on. Toggle off in the Inspector to restore the original behavior.")]
-        [SerializeField] private bool _testHardTurnAsDefault = true;
-
+        [Header("Bank Curve")]
         [Tooltip("Easing exponent for the bank curve. 1 = linear (classic Lerp). 2 = quadratic taper ('fast at start, slower and slower'). Higher = more pronounced asymptote. Applies symmetrically to entry and recovery.")]
         [SerializeField] private float _bankEasingPower = 2f;
 
         [Tooltip("Minimum angular bank speed (deg/sec). Floor that kicks in when the natural curve speed would otherwise crawl. Prevents the last few degrees from feeling like they never finish.")]
         [SerializeField] private float _bankMinSpeed = 50f;
 
-        private enum FlightMode { Normal, HardTurn, BarrelRoll }
+        [Header("Boost Fuel (Space throttle)")]
+        [Tooltip("Max boost fuel. UI bar shows this as 100%.")]
+        [SerializeField] private float maxBoostFuel = 100f;
+        [Tooltip("Boost fuel consumed per second while Space is held and throttle is positive.")]
+        [SerializeField] private float boostConsumeRate = 40f;
+        [Tooltip("Boost fuel regenerated per second when not boosting.")]
+        [SerializeField] private float boostRegenRate = 18f;
+
+        private enum FlightMode { Normal, BarrelRoll }
 
         private FlightState _state;
         private FlightInput _input;
@@ -50,13 +53,20 @@ namespace SkyBrawl.Player
         private InputAction _pitchAction;
         private InputAction _yawAction;
         private InputAction _throttleAction;
-        private InputAction _hardTurnAction;
+        private InputAction _rollTriggerAction; // Shift — triggers barrel roll when pressed with yaw
 
-        // Mode / barrel-roll state
         private FlightMode _mode = FlightMode.Normal;
-        private float _lastShiftPressTime = -999f;
         private float _barrelRollElapsed;
         private float _barrelRollDirection; // +1 = roll left (A), -1 = roll right (D)
+
+        // Boost fuel runtime state
+        private float _currentBoostFuel;
+        public float CurrentBoostFuel => _currentBoostFuel;
+        public float MaxBoostFuel    => maxBoostFuel;
+        public float BoostFuelRatio01 => maxBoostFuel > 0 ? Mathf.Clamp01(_currentBoostFuel / maxBoostFuel) : 0f;
+
+        // External yaw bias (e.g. from MapBoundary auto-return). Added to player input.
+        [HideInInspector] public float externalYawBias;
 
         public FlightState State => _state;
         public PlaneTuningSO Tuning => tuning;
@@ -72,13 +82,15 @@ namespace SkyBrawl.Player
             _state.rotation = transform.rotation;
             _state.currentSpeed = tuning != null ? tuning.cruiseSpeed : 40f;
 
+            _currentBoostFuel = maxBoostFuel;
+
             if (inputActions != null)
             {
                 var map = inputActions.FindActionMap("Flight", throwIfNotFound: true);
                 _pitchAction    = map.FindAction("Pitch", true);
                 _yawAction      = map.FindAction("Yaw", true);
                 _throttleAction = map.FindAction("Throttle", true);
-                _hardTurnAction = map.FindAction("HardTurnModifier", false);
+                _rollTriggerAction = map.FindAction("HardTurnModifier", false); // reused as barrel-roll trigger
                 map.Enable();
             }
         }
@@ -91,35 +103,41 @@ namespace SkyBrawl.Player
             float rawPitch    = _pitchAction    != null ? _pitchAction.ReadValue<float>()    : 0f;
             float rawYaw      = _yawAction      != null ? _yawAction.ReadValue<float>()      : 0f;
             float rawThrottle = _throttleAction != null ? _throttleAction.ReadValue<float>() : 0f;
-            bool hardTurnHeld = _hardTurnAction != null && _hardTurnAction.IsPressed();
-            bool shiftPressedThisFrame = _hardTurnAction != null && _hardTurnAction.WasPressedThisFrame();
+            bool shiftPressedThisFrame = _rollTriggerAction != null && _rollTriggerAction.WasPressedThisFrame();
 
-            // --- Barrel roll detection (double-tap Shift while yaw input is non-zero) ---
-            // TEMP: disabled while _testHardTurnAsDefault is true (Shift is unbound during the test).
-            if (!_testHardTurnAsDefault && _mode != FlightMode.BarrelRoll && shiftPressedThisFrame)
+            // --- Boost fuel: consume while positive throttle, regen otherwise ---
+            //     If fuel runs out, the positive throttle is clamped to zero.
+            float effectiveThrottle = rawThrottle;
+            if (rawThrottle > 0f)
             {
-                float dt = Time.time - _lastShiftPressTime;
-                if (dt <= tuning.doubleTapWindow && Mathf.Abs(rawYaw) > 0.01f)
+                if (_currentBoostFuel > 0f)
                 {
-                    // Trigger barrel roll
-                    _mode = FlightMode.BarrelRoll;
-                    _barrelRollElapsed = 0f;
-                    // A => negative yaw => roll left => +360 in Z
-                    // D => positive yaw => roll right => -360 in Z
-                    _barrelRollDirection = -Mathf.Sign(rawYaw);
-                    // Reset so a third tap doesn't immediately re-trigger after this roll
-                    _lastShiftPressTime = -999f;
+                    _currentBoostFuel = Mathf.Max(0f, _currentBoostFuel - boostConsumeRate * Time.deltaTime);
                 }
                 else
                 {
-                    _lastShiftPressTime = Time.time;
+                    effectiveThrottle = 0f; // no fuel -> no boost; falls back to cruise
                 }
+            }
+            else
+            {
+                _currentBoostFuel = Mathf.Min(maxBoostFuel, _currentBoostFuel + boostRegenRate * Time.deltaTime);
+            }
+
+            // --- Barrel roll trigger: Shift pressed THIS FRAME while yaw is held ---
+            if (_mode != FlightMode.BarrelRoll && shiftPressedThisFrame && Mathf.Abs(rawYaw) > 0.01f)
+            {
+                _mode = FlightMode.BarrelRoll;
+                _barrelRollElapsed = 0f;
+                // A => negative yaw => roll left  (+360 in Z)
+                // D => positive yaw => roll right (-360 in Z)
+                _barrelRollDirection = -Mathf.Sign(rawYaw);
             }
 
             // --- Apply inputs depending on mode ---
             _input.pitch    = rawPitch;
-            _input.roll     = 0f; // physics roll disabled
-            _input.throttle = rawThrottle;
+            _input.roll     = 0f; // physics roll disabled (visual only)
+            _input.throttle = effectiveThrottle;
 
             if (_mode == FlightMode.BarrelRoll)
             {
@@ -130,7 +148,6 @@ namespace SkyBrawl.Player
                 float t = Mathf.Clamp01(_barrelRollElapsed / Mathf.Max(0.001f, tuning.barrelRollDuration));
                 float rollAngle = Mathf.Lerp(0f, 360f * _barrelRollDirection, t);
 
-                // The roll animator owns visualRoot during the barrel roll.
                 _currentBankAngle = rollAngle;
                 if (visualRoot != null)
                     visualRoot.localRotation = Quaternion.Euler(0f, 0f, _currentBankAngle);
@@ -138,35 +155,13 @@ namespace SkyBrawl.Player
                 if (_barrelRollElapsed >= tuning.barrelRollDuration)
                 {
                     _mode = FlightMode.Normal;
-                    // Reset to 0 so the normal banking lerp resumes from a sane angle
-                    // (avoids easing back from a 360-equivalent). Mathf.Repeat(360, 360) = 0.
-                    _currentBankAngle = 0f;
+                    _currentBankAngle = 0f; // reset so the normal lerp resumes cleanly
                 }
             }
             else
             {
-                // Hard turn: Shift held AND yaw input present.
-                // TEMP: when _testHardTurnAsDefault is true, any yaw input counts as hard turn (Shift unbound).
-                bool inHardTurn = (_testHardTurnAsDefault || hardTurnHeld) && Mathf.Abs(rawYaw) > 0.01f;
-                _mode = inHardTurn ? FlightMode.HardTurn : FlightMode.Normal;
-
-                if (inHardTurn)
-                {
-                    // Tie yaw amplification to current visual bank progress so the plane
-                    // must physically lerp through neutral before it can hard-bank the
-                    // other direction. At |bank| == hardTurnBankAngle the multiplier is
-                    // full strength; at bank == 0 it's 1x (no amplification).
-                    float bankProgress = Mathf.Clamp01(
-                        Mathf.Abs(_currentBankAngle) / Mathf.Max(0.001f, tuning.hardTurnBankAngle));
-                    float dynamicMultiplier = Mathf.Lerp(1f, tuning.hardTurnYawMultiplier, bankProgress);
-                    _input.yaw = rawYaw * dynamicMultiplier;
-                }
-                else
-                {
-                    _input.yaw = rawYaw;
-                }
-
-                UpdateVisualBanking(rawYaw, inHardTurn);
+                _input.yaw = rawYaw + externalYawBias;
+                UpdateVisualBanking(rawYaw);
             }
         }
 
@@ -182,40 +177,20 @@ namespace SkyBrawl.Player
 
         /// <summary>
         /// Tilts the visual mesh when turning. Pure cosmetic — does not affect physics.
-        /// In hard-turn mode the target bank is +/- hardTurnBankAngle and the lerp is faster.
+        /// Uses a power-curve approach so the bank lerps fast at the start and tapers
+        /// near the target, with a minimum speed floor to avoid an infinite asymptote.
         /// </summary>
-        private void UpdateVisualBanking(float rawYaw, bool inHardTurn)
+        private void UpdateVisualBanking(float rawYaw)
         {
             if (visualRoot == null) return;
 
-            float targetBank;
-            float smoothing;
-            if (_testHardTurnAsDefault)
-            {
-                // TEMP test mode: always use hard-turn params so entry AND recovery share the same curve.
-                targetBank = -rawYaw * tuning.hardTurnBankAngle;
-                smoothing  = tuning.hardTurnBankSmoothing;
-            }
-            else if (inHardTurn)
-            {
-                // Sign of yaw drives direction. Negative so right turn (D, +yaw) tilts right (-Z).
-                targetBank = -Mathf.Sign(rawYaw) * tuning.hardTurnBankAngle;
-                smoothing  = tuning.hardTurnBankSmoothing;
-            }
-            else
-            {
-                targetBank = -rawYaw * maxBankAngle;
-                smoothing  = bankSmoothing;
-            }
+            float targetBank = -rawYaw * maxBankAngle;
+            float smoothing  = bankSmoothing;
 
-            // Power-curve approach: angularSpeed = maxSpeed * (distance/maxAngle)^easing.
-            // easing = 1 mimics Lerp; easing > 1 amplifies the "fast at start, slower and slower
-            // toward target" feel. Same curve applies symmetrically to entry (-> +/-bankAngle)
-            // and recovery (-> 0).
             float remaining   = targetBank - _currentBankAngle;
-            float distNorm    = Mathf.Clamp01(Mathf.Abs(remaining) / Mathf.Max(1f, tuning.hardTurnBankAngle));
+            float distNorm    = Mathf.Clamp01(Mathf.Abs(remaining) / Mathf.Max(1f, maxBankAngle));
             float speedScale  = Mathf.Pow(distNorm, _bankEasingPower);
-            float maxSpeedDeg = smoothing * tuning.hardTurnBankAngle;
+            float maxSpeedDeg = smoothing * maxBankAngle;
             float curveSpeed  = maxSpeedDeg * speedScale;
             float speedDeg    = Mathf.Max(curveSpeed, _bankMinSpeed);
             float frameDelta  = speedDeg * Time.deltaTime;
@@ -223,5 +198,8 @@ namespace SkyBrawl.Player
 
             visualRoot.localRotation = Quaternion.Euler(0f, 0f, _currentBankAngle);
         }
+
+        /// <summary>Refill boost fuel to max. Called on respawn / map enter.</summary>
+        public void RefillBoostFuel() => _currentBoostFuel = maxBoostFuel;
     }
 }
