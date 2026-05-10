@@ -24,9 +24,9 @@ namespace SkyBrawl.Player
         [Tooltip("The visual mesh of the plane. Will be tilted on the Z axis when turning. Assign a child GameObject here.")]
         [SerializeField] private Transform visualRoot;
         [Tooltip("Maximum bank angle in degrees when turning at full input.")]
-        [SerializeField] private float maxBankAngle = 45f;
-        [Tooltip("How quickly the visual tilt eases in/out. Higher = snappier.")]
-        [SerializeField] private float bankSmoothing = 6f;
+        [SerializeField] private float maxBankAngle = 90f;
+        [Tooltip("How quickly the visual tilt eases in/out. Higher = snappier. Combined with the bank curve below.")]
+        [SerializeField] private float bankSmoothing = 4f;
 
         [Header("Bank Curve")]
         [Tooltip("Easing exponent for the bank curve. 1 = linear (classic Lerp). 2 = quadratic taper ('fast at start, slower and slower'). Higher = more pronounced asymptote. Applies symmetrically to entry and recovery.")]

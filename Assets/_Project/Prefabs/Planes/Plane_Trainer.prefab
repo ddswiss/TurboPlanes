@@ -109,8 +109,8 @@ MonoBehaviour:
   tuning: {fileID: 11400000, guid: e9689128395b1c04da891cac7c79ba08, type: 2}
   inputActions: {fileID: -944628639613478452, guid: d29b3b2fbd83a8a41baab93f866e2238, type: 3}
   visualRoot: {fileID: 8862527718348129260}
-  maxBankAngle: 35
-  bankSmoothing: 6
+  maxBankAngle: 90
+  bankSmoothing: 4
   _bankEasingPower: 2
   _bankMinSpeed: 50
   maxBoostFuel: 100
