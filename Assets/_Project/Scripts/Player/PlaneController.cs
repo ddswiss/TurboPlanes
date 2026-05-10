@@ -57,7 +57,8 @@ namespace SkyBrawl.Player
 
         private FlightMode _mode = FlightMode.Normal;
         private float _barrelRollElapsed;
-        private float _barrelRollDirection; // +1 = roll left (A), -1 = roll right (D)
+        private float _barrelRollDirection;  // +1 = roll left (A), -1 = roll right (D)
+        private float _barrelRollStartAngle; // bank angle when roll began — roll continues from here
 
         // Boost fuel runtime state
         private float _currentBoostFuel;
@@ -129,6 +130,9 @@ namespace SkyBrawl.Player
             {
                 _mode = FlightMode.BarrelRoll;
                 _barrelRollElapsed = 0f;
+                // Capture current visual bank so the roll continues from where we are
+                // (no snap to 0 when the player triggers a roll while already banking).
+                _barrelRollStartAngle = _currentBankAngle;
                 // A => negative yaw => roll left  (+360 in Z)
                 // D => positive yaw => roll right (-360 in Z)
                 _barrelRollDirection = -Mathf.Sign(rawYaw);
@@ -146,16 +150,19 @@ namespace SkyBrawl.Player
 
                 _barrelRollElapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(_barrelRollElapsed / Mathf.Max(0.001f, tuning.barrelRollDuration));
-                float rollAngle = Mathf.Lerp(0f, 360f * _barrelRollDirection, t);
+                float rollOffset = Mathf.Lerp(0f, 360f * _barrelRollDirection, t);
 
-                _currentBankAngle = rollAngle;
+                // Continue the rotation FROM whatever bank we were at when the roll started.
+                _currentBankAngle = _barrelRollStartAngle + rollOffset;
                 if (visualRoot != null)
                     visualRoot.localRotation = Quaternion.Euler(0f, 0f, _currentBankAngle);
 
                 if (_barrelRollElapsed >= tuning.barrelRollDuration)
                 {
                     _mode = FlightMode.Normal;
-                    _currentBankAngle = 0f; // reset so the normal lerp resumes cleanly
+                    // End at the start angle (a full 360 lands us visually back where we began).
+                    // This avoids a visible jump if the player is still holding the same direction.
+                    _currentBankAngle = _barrelRollStartAngle;
                 }
             }
             else
