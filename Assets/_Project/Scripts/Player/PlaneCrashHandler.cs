@@ -37,10 +37,14 @@ namespace SkyBrawl.Player
         [Tooltip("Initial random tumble (degrees/sec roughly).")]
         [SerializeField] private float crashTumbleSpin = 360f;
 
+        [Tooltip("Grace period (seconds) after enable during which crashes are ignored. Prevents instant respawn loops at spawn.")]
+        [SerializeField] private float spawnGrace = 0.75f;
+
         private PlaneController _plane;
         private Rigidbody _rb;
         private SphereCollider _hullTrigger;
         private bool _isCrashing;
+        private float _activatedAt;
 
         private void Awake()
         {
@@ -62,17 +66,28 @@ namespace SkyBrawl.Player
             }
         }
 
+        private void OnEnable()
+        {
+            _activatedAt = Time.time;
+        }
+
         private void OnTriggerStay(Collider other)
         {
             if (_isCrashing) return;
-            // Ignore our own hierarchy
-            if (other.transform.IsChildOf(transform)) return;
+            if (Time.time - _activatedAt < spawnGrace) return;             // grace period after spawn/respawn
+            if (other.isTrigger) return;                                   // ignore triggers (HangarTriggerZone etc.)
+            if (other.transform.IsChildOf(transform)) return;              // ignore our own hierarchy
 
             Vector3 closest = other.ClosestPoint(transform.position);
             Vector3 outward = transform.position - closest;
             float   dist    = outward.magnitude;
-            Vector3 normal  = dist > 0.0001f ? outward / dist : -transform.forward;
 
+            // If ClosestPoint returns our own position, we're INSIDE the collider's bounds.
+            // For a huge non-uniform-scale SphereCollider (e.g. flattened island base) this is a
+            // false-positive: we're not actually touching the visible mesh. Ignore.
+            if (dist < 0.05f) return;
+
+            Vector3 normal  = outward / dist;
             float speed     = _plane.State.currentSpeed;
             float impactCos = Vector3.Dot(transform.forward, -normal);
 
