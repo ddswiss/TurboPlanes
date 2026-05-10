@@ -53,7 +53,7 @@ namespace SkyBrawl.UI
 
             fillBar.type = Image.Type.Filled;
             fillBar.fillMethod = Image.FillMethod.Horizontal;
-            fillBar.fillOrigin = (int)Image.OriginHorizontal.Right; // empty leftwards
+            fillBar.fillOrigin = (int)Image.OriginHorizontal.Left; // empty leftwards (right edge of fill moves left)
         }
 
         private void Update()
