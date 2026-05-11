@@ -31,7 +31,7 @@ namespace SkyBrawl.Player
 
         [Header("Ragdoll + Respawn")]
         [Tooltip("How many seconds to tumble before respawning the plane.")]
-        [SerializeField] private float respawnDelay = 3f;
+        [SerializeField] private float respawnDelay = 1.5f;
         [Tooltip("Multiplier applied to the captured forward speed when handing it to the dynamic rigidbody.")]
         [SerializeField] private float crashVelocityScale = 1f;
         [Tooltip("Initial random tumble (degrees/sec roughly).")]
@@ -115,10 +115,16 @@ namespace SkyBrawl.Player
             // Capture current forward velocity from the FlightModel before handing off to physics
             Vector3 capturedVelocity = transform.forward * _plane.State.currentSpeed * crashVelocityScale;
 
+            // CRITICAL: switch the hull collider to a NON-trigger so the dynamic rigidbody
+            // physically collides with terrain (mesas, island, ocean). While it's a trigger,
+            // the ragdoll falls through everything.
+            _hullTrigger.isTrigger = false;
+
             // Disable flight control and switch to dynamic physics for the tumble
             _plane.enabled = false;
             _rb.isKinematic = false;
             _rb.useGravity  = true;
+            _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic; // avoid tunnelling thin colliders at high fall speed
             _rb.linearVelocity  = capturedVelocity;
             _rb.angularVelocity = Random.insideUnitSphere * (crashTumbleSpin * Mathf.Deg2Rad);
 
@@ -130,15 +136,21 @@ namespace SkyBrawl.Player
             Vector3    pos = spawn != null ? spawn.transform.position : Vector3.zero;
             Quaternion rot = spawn != null ? spawn.transform.rotation : Quaternion.identity;
 
-            // Reset rigidbody before re-enabling the controller
+            // Reset rigidbody before re-enabling the controller. Order matters:
+            // collision detection mode must be Discrete BEFORE isKinematic = true.
             _rb.linearVelocity  = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
+            _rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
             _rb.isKinematic = true;
             _rb.useGravity  = false;
+
+            // Back to trigger mode for flight-time detection
+            _hullTrigger.isTrigger = true;
 
             _plane.RespawnAt(pos, rot);
             _plane.enabled = true;
             _isCrashing = false;
+            _activatedAt = Time.time; // re-arm spawn grace so respawn doesn't instant-crash
         }
     }
 }

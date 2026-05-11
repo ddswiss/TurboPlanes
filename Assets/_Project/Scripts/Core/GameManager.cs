@@ -124,9 +124,47 @@ namespace SkyBrawl.Core
 
             // TODO: apply runtime tuning clone with upgrades.
 
+            // Apply the main-menu speed-slider multiplier to the freshly cloned tuning SO
+            // (PlaneController.Awake instantiates its own copy so this doesn't mutate the asset).
+            ApplySpeedMultiplierToActivePlane(Profile.speedStage);
+            // Apply the hangar boost-drain-slider multiplier.
+            ApplyBoostDrainMultiplierToActivePlane(Profile.boostDrainStage);
+
             // Apply the saved color for this plane to the freshly spawned instance.
             var saveData = Profile.GetOrCreatePlaneData(Profile.selectedPlaneId);
             ApplyColorToActivePlane(saveData.color);
+        }
+
+        /// <summary>Apply the menu speed-slider stage (1..10, default 5) to the plane's runtime tuning.
+        /// Computes current = base * multiplier, so re-applying with a different stage doesn't compound.</summary>
+        private void ApplySpeedMultiplierToActivePlane(int stage)
+        {
+            if (_activePlane == null) return;
+            var pc = _activePlane.GetComponent<SkyBrawl.Player.PlaneController>();
+            if (pc == null || pc.Tuning == null) return;
+            float mult = 1f + (Mathf.Clamp(stage, 1, 10) - 5) * 0.2f;
+            pc.Tuning.cruiseSpeed = pc.BaseCruiseSpeed * mult;
+            pc.Tuning.maxSpeed    = pc.BaseMaxSpeed    * mult;
+            pc.Tuning.minSpeed    = pc.BaseMinSpeed    * mult;
+        }
+
+        /// <summary>Apply the hangar boost-drain-slider stage (1..10, default 5) to the plane.
+        /// Computes current = base * multiplier.</summary>
+        private void ApplyBoostDrainMultiplierToActivePlane(int stage)
+        {
+            if (_activePlane == null) return;
+            var pc = _activePlane.GetComponent<SkyBrawl.Player.PlaneController>();
+            if (pc == null) return;
+            float mult = 1f + (Mathf.Clamp(stage, 1, 10) - 5) * 0.2f;
+            pc.BoostConsumeRate = pc.BaseBoostConsumeRate * mult;
+        }
+
+        /// <summary>Re-apply all upgrade sliders (speed + boost drain) to the currently active plane.
+        /// Called by UI sliders so changes take effect immediately, not just on next respawn.</summary>
+        public void RefreshActivePlaneUpgrades()
+        {
+            ApplySpeedMultiplierToActivePlane(Profile.speedStage);
+            ApplyBoostDrainMultiplierToActivePlane(Profile.boostDrainStage);
         }
 
         public void SetSelectedPlane(string planeId)

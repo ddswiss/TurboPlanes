@@ -129,12 +129,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc940f77b7e17354081690f1d44582e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkyBrawl.Player.PlaneCrashHandler
-  hullRadius: 4
+  hullRadius: 2.5
   crashSpeedThreshold: 30
   crashAngleCosThreshold: 0.4
-  respawnDelay: 3
+  respawnDelay: 1.5
   crashVelocityScale: 1
   crashTumbleSpin: 360
+  spawnGrace: 0.75
 --- !u!1001 &6928291704398949958
 PrefabInstance:
   m_ObjectHideFlags: 0

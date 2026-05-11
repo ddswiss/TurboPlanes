@@ -43,6 +43,12 @@ namespace SkyBrawl.Player
         [Tooltip("Boost fuel regenerated per second when not boosting.")]
         [SerializeField] private float boostRegenRate = 18f;
 
+        [Header("Continuous Collision (anti-tunnel)")]
+        [Tooltip("SphereCast radius used each FixedUpdate to detect terrain in front of the plane before MovePosition teleports through thin walls. Should roughly match the PlaneCrashHandler hull radius. 0 = disabled.")]
+        [SerializeField] private float ccdRadius = 2.5f;
+        [Tooltip("How far past first contact the plane advances so PlaneCrashHandler.OnTriggerStay can still detect the overlap. Must be < ccdRadius so the plane center stays outside the wall (otherwise OnTriggerStay's inside-collider early-out fires).")]
+        [SerializeField] private float ccdOverlap = 0.3f;
+
         private enum FlightMode { Normal, BarrelRoll }
 
         private FlightState _state;
@@ -66,6 +72,19 @@ namespace SkyBrawl.Player
         public float MaxBoostFuel    => maxBoostFuel;
         public float BoostFuelRatio01 => maxBoostFuel > 0 ? Mathf.Clamp01(_currentBoostFuel / maxBoostFuel) : 0f;
 
+        // Public setter so GameManager can apply the hangar's boost-drain upgrade at spawn time.
+        public float BoostConsumeRate { get => boostConsumeRate; set => boostConsumeRate = value; }
+        public float BoostRegenRate   { get => boostRegenRate;   set => boostRegenRate = value; }
+
+        // Base values captured at Awake time so GameManager can recompute current values
+        // as (base * multiplier) every time the player tweaks a hangar slider — instead of
+        // compounding multipliers onto already-modified state.
+        private float _baseCruiseSpeed, _baseMaxSpeed, _baseMinSpeed, _baseBoostConsumeRate;
+        public float BaseCruiseSpeed      => _baseCruiseSpeed;
+        public float BaseMaxSpeed         => _baseMaxSpeed;
+        public float BaseMinSpeed         => _baseMinSpeed;
+        public float BaseBoostConsumeRate => _baseBoostConsumeRate;
+
         // External yaw bias (e.g. from MapBoundary auto-return). Added to player input.
         [HideInInspector] public float externalYawBias;
 
@@ -78,6 +97,24 @@ namespace SkyBrawl.Player
             _rb.isKinematic = true;
             _rb.useGravity = false;
             _rb.interpolation = RigidbodyInterpolation.Interpolate;
+
+            // Clone the tuning SO so runtime tweaks (e.g. speed multiplier from the
+            // main-menu slider) don't permanently mutate the project asset.
+            if (tuning != null)
+            {
+                tuning = Instantiate(tuning);
+                tuning.name = tuning.name + " (Runtime)";
+            }
+
+            // Capture base values so GameManager can recompute current = base * multiplier
+            // every time the hangar sliders change.
+            if (tuning != null)
+            {
+                _baseCruiseSpeed = tuning.cruiseSpeed;
+                _baseMaxSpeed    = tuning.maxSpeed;
+                _baseMinSpeed    = tuning.minSpeed;
+            }
+            _baseBoostConsumeRate = boostConsumeRate;
 
             _state.position = transform.position;
             _state.rotation = transform.rotation;
@@ -176,7 +213,31 @@ namespace SkyBrawl.Player
         {
             if (tuning == null) return;
 
+            Vector3 prevPos = _state.position;
             _state = FlightModel.Step(_state, _input, tuning, Time.fixedDeltaTime);
+
+            // --- Continuous Collision Detection (anti-tunnel) ---
+            // At high speeds the per-step movement can exceed the trigger sphere diameter,
+            // causing the plane to teleport across thin colliders without OnTriggerStay firing.
+            // Cast a sphere along the intended move; if anything blocks, clamp the new
+            // position to just past the contact point so the hull trigger still overlaps
+            // the static collider and PlaneCrashHandler can slide/crash from there.
+            if (ccdRadius > 0f)
+            {
+                Vector3 delta = _state.position - prevPos;
+                float dist = delta.magnitude;
+                if (dist > 0.001f)
+                {
+                    Vector3 dir = delta / dist;
+                    if (Physics.SphereCast(prevPos, ccdRadius, dir, out RaycastHit hit, dist,
+                            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                    {
+                        float clampedAdvance = Mathf.Min(hit.distance + ccdOverlap, dist);
+                        clampedAdvance = Mathf.Max(0f, clampedAdvance);
+                        _state.position = prevPos + dir * clampedAdvance;
+                    }
+                }
+            }
 
             _rb.MovePosition(_state.position);
             _rb.MoveRotation(_state.rotation);

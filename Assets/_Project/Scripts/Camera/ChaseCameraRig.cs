@@ -52,9 +52,35 @@ namespace SkyBrawl.CameraRig
         // Z-key toggle. Free cam is active if Z is toggled ON or RMB is held.
         private bool _zToggled;
 
+        // Cached rigidbody on the target — used to detect ragdoll state (non-kinematic = crashed).
+        private Rigidbody _targetRb;
+
         private void LateUpdate()
         {
             if (target == null) return;
+
+            // Lazy-cache the target's rigidbody so we can detect ragdoll state below.
+            if (_targetRb == null) _targetRb = target.GetComponent<Rigidbody>();
+
+            // RAGDOLL / CRASH state: target's rb is dynamic (non-kinematic). Freeze the
+            // camera position so it doesn't follow the tumbling wreck (would lag, clip
+            // into terrain, and look weird). Just rotate slowly to keep the wreck framed
+            // until the respawn happens.
+            bool isCrashed = _targetRb != null && !_targetRb.isKinematic;
+            if (isCrashed)
+            {
+                Vector3 toTarget = target.position - transform.position;
+                if (toTarget.sqrMagnitude > 0.0001f)
+                {
+                    Quaternion lookRot = Quaternion.LookRotation(toTarget.normalized, Vector3.up);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, 3f * Time.deltaTime);
+                }
+                // Reset orbit/transition state so re-entry on respawn is clean
+                _wasFreeCamActive = false;
+                _pressT = 0f;
+                _zToggled = false; // turn off free-cam if it was on (avoids confusing camera-jerk on respawn)
+                return;
+            }
 
             // Toggle Z (keyboard) on press transitions.
             if (Keyboard.current != null && Keyboard.current.zKey.wasPressedThisFrame)
@@ -143,6 +169,10 @@ namespace SkyBrawl.CameraRig
             }
         }
 
-        public void SetTarget(Transform t) => target = t;
+        public void SetTarget(Transform t)
+        {
+            target   = t;
+            _targetRb = t != null ? t.GetComponent<Rigidbody>() : null;
+        }
     }
 }

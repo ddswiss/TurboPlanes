@@ -10,7 +10,8 @@ namespace SkyBrawl.Persistence
         public string planeId;
         public List<string> upgradeIds = new();
         public List<int>    upgradeLevels = new();
-        public Color color = new Color(0.85f, 0.20f, 0.20f, 1f);
+        // White = no tint (MaterialPropertyBlock pass-through). Texture renders as-imported.
+        public Color color = Color.white;
 
         public int GetUpgradeLevel(string upgradeId)
         {

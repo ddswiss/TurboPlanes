@@ -15,6 +15,13 @@ namespace SkyBrawl.Persistence
         public string selectedMapId   = "";
         public int currency = 0;
 
+        // TEMP: global plane-speed adjustment from the main-menu slider.
+        // 5 = 100% (1.0x multiplier). Each step is +/-20% (range 1..10 -> 0.2x..2.0x).
+        public int speedStage = 5;
+        // Same scheme for boost drain: stage 5 = 100% drain rate.
+        // Stage 1 = drains slowly (20% rate), stage 10 = drains fast (200% rate).
+        public int boostDrainStage = 5;
+
         const string FileName = "profile.json";
 
         public static string SavePath => Path.Combine(Application.persistentDataPath, FileName);
