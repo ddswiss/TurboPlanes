@@ -18,8 +18,8 @@ namespace SkyBrawl.UI
         [Tooltip("The TextMeshPro UI text that displays the speed.")]
         [SerializeField] private TMP_Text speedText;
 
-        [Tooltip("Multiplier applied to raw speed before display. Game units are arbitrary; ~3.6 makes 'fast' arcade speeds read like km/h.")]
-        [SerializeField] private float displayMultiplier = 3.6f;
+        [Tooltip("Multiplier applied to raw speed before display. Game units are arbitrary; tune to read like km/h.")]
+        [SerializeField] private float displayMultiplier = 2.5f;
 
         [Tooltip("How smoothly the displayed value catches up to the actual speed. Higher = snappier.")]
         [SerializeField] private float smoothing = 8f;

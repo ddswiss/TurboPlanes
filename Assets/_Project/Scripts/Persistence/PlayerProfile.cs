@@ -15,12 +15,18 @@ namespace SkyBrawl.Persistence
         public string selectedMapId   = "";
         public int currency = 0;
 
-        // TEMP: global plane-speed adjustment from the main-menu slider.
-        // 5 = 100% (1.0x multiplier). Each step is +/-20% (range 1..10 -> 0.2x..2.0x).
-        public int speedStage = 5;
-        // Same scheme for boost drain: stage 5 = 100% drain rate.
-        // Stage 1 = drains slowly (20% rate), stage 10 = drains fast (200% rate).
-        public int boostDrainStage = 5;
+        // Speed upgrade points (0..10). Each point adds +10% to the base cruise speed.
+        // 0 = no upgrade (cruise = base), 10 = +100% (cruise = 2x base).
+        public int speedStage = 0;
+        // Boost upgrade points (0..10). Each point adds +5 game-units to the cruise→max gap.
+        // 0 = stock 30-unit gap, 10 = 80-unit gap (much higher top speed when boosting).
+        public int boostStage = 0;
+        // Boost duration upgrade points (0..8). Default 2s of boost; each point adds +1s.
+        // Max stage 8 → 10s of boost from full bar.
+        public int boostDurationStage = 0;
+        // Boost refill upgrade points (0..5). Default 5s to refill from empty; each point
+        // shaves -0.5s off. Max stage 5 → 2.5s to fully refill.
+        public int boostRefillStage = 0;
 
         const string FileName = "profile.json";
 

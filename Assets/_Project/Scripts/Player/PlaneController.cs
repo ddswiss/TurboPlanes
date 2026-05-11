@@ -38,10 +38,16 @@ namespace SkyBrawl.Player
         [Header("Boost Fuel (Space throttle)")]
         [Tooltip("Max boost fuel. UI bar shows this as 100%.")]
         [SerializeField] private float maxBoostFuel = 100f;
-        [Tooltip("Boost fuel consumed per second while Space is held and throttle is positive.")]
-        [SerializeField] private float boostConsumeRate = 40f;
-        [Tooltip("Boost fuel regenerated per second when not boosting.")]
-        [SerializeField] private float boostRegenRate = 18f;
+        [Tooltip("Boost fuel consumed per second while Space is held and throttle is positive. With maxBoostFuel=100, default 50/s = 2s of full boost. GameManager overrides at runtime based on Boost Duration upgrade.")]
+        [SerializeField] private float boostConsumeRate = 50f;
+        [Tooltip("Boost fuel regenerated per second when not boosting. With maxBoostFuel=100, default 20/s = 5s to refill. GameManager overrides at runtime based on Boost Refill upgrade.")]
+        [SerializeField] private float boostRegenRate = 20f;
+
+        [Header("Steering lock (low-speed safety)")]
+        [Tooltip("Below this speed (game units), pitch + yaw input are ignored and the plane auto-levels toward horizontal. Above this speed, full pilot control. Useful for landing/taxi where WASD shouldn't fight the runway.")]
+        [SerializeField] private float steeringLockBelowSpeed = 15f;
+        [Tooltip("How fast the plane levels itself toward horizontal while steering is locked. Higher = snappier.")]
+        [SerializeField] private float autoLevelSpeed = 4f;
 
         [Header("Continuous Collision (anti-tunnel)")]
         [Tooltip("SphereCast radius used each FixedUpdate to detect terrain in front of the plane before MovePosition teleports through thin walls. Should roughly match the PlaneCrashHandler hull radius. 0 = disabled.")]
@@ -88,8 +94,50 @@ namespace SkyBrawl.Player
         // External yaw bias (e.g. from MapBoundary auto-return). Added to player input.
         [HideInInspector] public float externalYawBias;
 
+        /// <summary>True when pilot input (pitch + yaw) is being suppressed because the plane
+        /// is below the steering-lock speed threshold. Throttle still responds.</summary>
+        public bool IsSteeringLocked => _state.currentSpeed < steeringLockBelowSpeed;
+
+        /// <summary>While true, PlaneCrashHandler skips terrain collisions for this plane.
+        /// Used by LandingZone so its Y-snap doesn't fight with terrain push-out.</summary>
+        [HideInInspector] public bool IgnoreTerrainCollision;
+
         public FlightState State => _state;
         public PlaneTuningSO Tuning => tuning;
+
+        /// <summary>While true, all flight physics & input are paused. Set by LandingZone
+        /// when the plane has stopped on the runway. Cleared on takeoff.</summary>
+        public bool IsLanded { get; set; }
+
+        /// <summary>Directly overwrite currentSpeed (skips throttle ramp). Used by LandingZone
+        /// to freeze the plane at 0 km/h on touchdown and reset to 0 before takeoff.</summary>
+        public void SetCurrentSpeed(float v) { _state.currentSpeed = v; }
+
+        /// <summary>Hard-snap the plane to a pose and zero its velocity. Used by LandingZone
+        /// to glue the plane to the runway surface during taxi/takeoff.</summary>
+        public void SnapTo(Vector3 pos, Quaternion rot)
+        {
+            transform.position = pos;
+            transform.rotation = rot;
+            _state.position = pos;
+            _state.rotation = rot;
+            _state.velocity = Vector3.zero;
+            if (_rb != null) _rb.position = pos;
+        }
+
+        /// <summary>Constrain the plane's Y to a runway surface without touching XZ — preserves
+        /// forward motion, just prevents the plane from sinking through the strip during taxi.
+        /// Zeros the vertical velocity component so gravity doesn't accumulate against the snap.</summary>
+        public void ConstrainGroundY(float y)
+        {
+            _state.position.y = y;
+            _state.velocity.y = 0f;
+            var tp = transform.position; tp.y = y; transform.position = tp;
+            if (_rb != null)
+            {
+                var rp = _rb.position; rp.y = y; _rb.position = rp;
+            }
+        }
 
         private void Awake()
         {
@@ -136,12 +184,17 @@ namespace SkyBrawl.Player
         private void Update()
         {
             if (tuning == null) return;
+            if (IsLanded) return;  // Frozen on runway — input + physics suspended
 
             // Read raw inputs
             float rawPitch    = _pitchAction    != null ? _pitchAction.ReadValue<float>()    : 0f;
             float rawYaw      = _yawAction      != null ? _yawAction.ReadValue<float>()      : 0f;
             float rawThrottle = _throttleAction != null ? _throttleAction.ReadValue<float>() : 0f;
             bool shiftPressedThisFrame = _rollTriggerAction != null && _rollTriggerAction.WasPressedThisFrame();
+
+            // Steering lock kicks in automatically below the speed threshold (e.g. on the
+            // runway during taxi). Throttle still works so the player can take off / brake.
+            if (IsSteeringLocked) { rawPitch = 0f; rawYaw = 0f; shiftPressedThisFrame = false; }
 
             // --- Boost fuel: consume while positive throttle, regen otherwise ---
             //     If fuel runs out, the positive throttle is clamped to zero.
@@ -212,9 +265,25 @@ namespace SkyBrawl.Player
         private void FixedUpdate()
         {
             if (tuning == null) return;
+            if (IsLanded) return;  // Frozen on runway — input + physics suspended
 
             Vector3 prevPos = _state.position;
             _state = FlightModel.Step(_state, _input, tuning, Time.fixedDeltaTime);
+
+            // --- Auto-level when steering is locked (low speed) ---
+            // Slerp _state.rotation toward a horizontal pose: zero pitch + roll, preserve
+            // current yaw. Above the lock threshold this branch is skipped so normal pilot
+            // input wins.
+            if (IsSteeringLocked)
+            {
+                Vector3 fwd = _state.rotation * Vector3.forward;
+                fwd.y = 0f;
+                if (fwd.sqrMagnitude > 0.0001f)
+                {
+                    Quaternion levelRot = Quaternion.LookRotation(fwd.normalized, Vector3.up);
+                    _state.rotation = Quaternion.Slerp(_state.rotation, levelRot, autoLevelSpeed * Time.fixedDeltaTime);
+                }
+            }
 
             // --- Continuous Collision Detection (anti-tunnel) ---
             // At high speeds the per-step movement can exceed the trigger sphere diameter,

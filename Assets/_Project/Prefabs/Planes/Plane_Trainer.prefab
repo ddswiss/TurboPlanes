@@ -114,9 +114,14 @@ MonoBehaviour:
   _bankEasingPower: 2
   _bankMinSpeed: 50
   maxBoostFuel: 100
-  boostConsumeRate: 40
-  boostRegenRate: 18
+  boostConsumeRate: 50
+  boostRegenRate: 20
+  steeringLockBelowSpeed: 15
+  autoLevelSpeed: 4
+  ccdRadius: 2.5
+  ccdOverlap: 0.3
   externalYawBias: 0
+  IgnoreTerrainCollision: 0
 --- !u!114 &2937777433230725778
 MonoBehaviour:
   m_ObjectHideFlags: 0

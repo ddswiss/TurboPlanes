@@ -5,9 +5,9 @@ using UnityEngine;
 namespace SkyBrawl.EditorTools
 {
     /// <summary>
-    /// Routes the Play button through Boot.unity for production scenes (Persistent, MainMenu, Map_*),
-    /// so the Bootstrap flow runs even if you press Play while editing a different scene.
-    /// FlightSandbox and Boot are excluded — they play directly so flight tuning iteration stays fast.
+    /// Routes the Play button through Boot.unity for every scene except Boot itself,
+    /// so the Bootstrap flow (Persistent → MainMenu) always runs no matter which scene
+    /// is open in the editor when you press Play.
     /// </summary>
     [InitializeOnLoad]
     public static class PlayFromBoot
@@ -24,27 +24,22 @@ namespace SkyBrawl.EditorTools
             if (state != PlayModeStateChange.ExitingEditMode) return;
 
             var current = EditorSceneManager.GetActiveScene().name;
-            bool needsBoot =
-                current == "Persistent" ||
-                current == "MainMenu"   ||
-                current.StartsWith("Map_");
+            bool playDirectly = current == "Boot";
 
-            if (needsBoot)
+            if (playDirectly)
             {
-                var boot = AssetDatabase.LoadAssetAtPath<SceneAsset>(BootScenePath);
-                if (boot != null)
-                {
-                    EditorSceneManager.playModeStartScene = boot;
-                }
-                else
-                {
-                    Debug.LogWarning($"[PlayFromBoot] Could not find {BootScenePath}. Playing directly.");
-                    EditorSceneManager.playModeStartScene = null;
-                }
+                EditorSceneManager.playModeStartScene = null;
+                return;
+            }
+
+            var boot = AssetDatabase.LoadAssetAtPath<SceneAsset>(BootScenePath);
+            if (boot != null)
+            {
+                EditorSceneManager.playModeStartScene = boot;
             }
             else
             {
-                // Direct play (Boot itself, FlightSandbox, or any other scene)
+                Debug.LogWarning($"[PlayFromBoot] Could not find {BootScenePath}. Playing directly.");
                 EditorSceneManager.playModeStartScene = null;
             }
         }

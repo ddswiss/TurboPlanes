@@ -7,35 +7,37 @@ namespace SkyBrawl.UI
 {
     public enum AdjusterTarget
     {
-        Speed,
-        BoostDrain
+        Speed,           // PlayerProfile.speedStage          — cruise = base * (1 + 0.10*stage)
+        BoostDuration,   // PlayerProfile.boostDurationStage  — boost lasts 2 + stage seconds (stage 0..8)
+        Boost,           // PlayerProfile.boostStage          — max = cruise + 30 + 6*stage game units
+        BoostRefill      // PlayerProfile.boostRefillStage    — refill in 5 - 0.5*stage seconds (stage 0..5)
     }
 
     /// <summary>
-    /// Generic stepped-slider UI (10 squares + plus/minus buttons) that reads/writes
-    /// a single int field on PlayerProfile. Default value 5 maps to 100%, each step
-    /// is +/-20% (range 1..10 -> 0.2x..2.0x multiplier).
-    ///
-    /// Used both on the MainMenu (Speed target) and on the Hangar's Upgrade tab
-    /// (Speed and BoostDrain targets).
+    /// Stepped-slider UI (squares + plus/minus) that reads/writes one int field on
+    /// PlayerProfile. Range is per-target via the maxStage SerializeField. Default 0
+    /// = no upgrade. Each step adds the upgrade effect described in AdjusterTarget.
     /// </summary>
     public class SpeedAdjusterUI : MonoBehaviour
     {
         [Header("Wiring")]
         [SerializeField] private Button minusButton;
         [SerializeField] private Button plusButton;
-        [SerializeField] private Image[] squares;          // 10 entries, index 0 = leftmost
+        [SerializeField] private Image[] squares;
         [SerializeField] private TMP_Text percentLabel;
 
         [Header("Config")]
         [Tooltip("Which PlayerProfile field this slider controls.")]
         [SerializeField] private AdjusterTarget target = AdjusterTarget.Speed;
-        [Tooltip("Prefix for the percent label. E.g. 'Speed' -> 'Speed: 100%'.")]
+        [Tooltip("Prefix for the label, e.g. 'Max Speed' -> 'Max Speed: 175 KM/H'.")]
         [SerializeField] private string labelPrefix = "Speed";
+        [Tooltip("Max stage this slider allows. Default 10 (full grid). Set lower for limited upgrades — e.g. BoostRefill max 5.")]
+        [Range(1, 10)] [SerializeField] private int maxStage = 10;
 
         [Header("Colors")]
-        [SerializeField] private Color filledColor = new Color(0.95f, 0.85f, 0.20f, 1f);
-        [SerializeField] private Color emptyColor  = new Color(1f, 1f, 1f, 0.18f);
+        [SerializeField] private Color filledColor   = new Color(0.95f, 0.85f, 0.20f, 1f);
+        [SerializeField] private Color emptyColor    = new Color(1f, 1f, 1f, 0.18f);
+        [SerializeField] private Color disabledColor = new Color(0.20f, 0.20f, 0.20f, 0.35f);
 
         private void Awake()
         {
@@ -48,12 +50,14 @@ namespace SkyBrawl.UI
         private int GetStage()
         {
             var gm = GameManager.Instance;
-            if (gm == null || gm.Profile == null) return 5;
+            if (gm == null || gm.Profile == null) return 0;
             switch (target)
             {
-                case AdjusterTarget.BoostDrain: return gm.Profile.boostDrainStage;
+                case AdjusterTarget.BoostDuration: return gm.Profile.boostDurationStage;
+                case AdjusterTarget.Boost:         return gm.Profile.boostStage;
+                case AdjusterTarget.BoostRefill:   return gm.Profile.boostRefillStage;
                 case AdjusterTarget.Speed:
-                default:                        return gm.Profile.speedStage;
+                default:                           return gm.Profile.speedStage;
             }
         }
 
@@ -63,18 +67,18 @@ namespace SkyBrawl.UI
             if (gm == null || gm.Profile == null) return;
             switch (target)
             {
-                case AdjusterTarget.BoostDrain: gm.Profile.boostDrainStage = stage; break;
-                case AdjusterTarget.Speed:      gm.Profile.speedStage      = stage; break;
+                case AdjusterTarget.BoostDuration: gm.Profile.boostDurationStage = stage; break;
+                case AdjusterTarget.Boost:         gm.Profile.boostStage         = stage; break;
+                case AdjusterTarget.BoostRefill:   gm.Profile.boostRefillStage   = stage; break;
+                case AdjusterTarget.Speed:         gm.Profile.speedStage         = stage; break;
             }
             gm.Profile.Save();
-            // Apply immediately to the active plane so hangar tweaks take effect without
-            // needing a respawn. (RefreshActivePlaneUpgrades is a no-op if no plane is spawned.)
             gm.RefreshActivePlaneUpgrades();
         }
 
         private void Step(int delta)
         {
-            int s = Mathf.Clamp(GetStage() + delta, 1, 10);
+            int s = Mathf.Clamp(GetStage() + delta, 0, maxStage);
             if (s == GetStage()) return;
             SetStage(s);
             Refresh();
@@ -82,18 +86,47 @@ namespace SkyBrawl.UI
 
         private void Refresh()
         {
-            int stage = Mathf.Clamp(GetStage(), 1, 10);
+            int stage = Mathf.Clamp(GetStage(), 0, maxStage);
 
             if (squares != null)
             {
                 for (int i = 0; i < squares.Length; i++)
-                    if (squares[i] != null) squares[i].color = (i < stage) ? filledColor : emptyColor;
+                {
+                    if (squares[i] == null) continue;
+                    if (i >= maxStage)        squares[i].color = disabledColor; // beyond max — locked off
+                    else if (i < stage)       squares[i].color = filledColor;
+                    else                      squares[i].color = emptyColor;
+                }
             }
 
             if (percentLabel != null)
             {
-                float mult = 1f + (stage - 5) * 0.2f;
-                percentLabel.text = labelPrefix + ": " + Mathf.RoundToInt(mult * 100f) + "%";
+                string suffix;
+                switch (target)
+                {
+                    case AdjusterTarget.BoostDuration:
+                        // 2s + 1s per stage
+                        suffix = (2 + stage) + "s";
+                        break;
+                    case AdjusterTarget.Boost:
+                        // +6 game units per stage = +15 km/h with displayMultiplier 2.5
+                        suffix = "+" + (15 * stage) + " km/h";
+                        break;
+                    case AdjusterTarget.BoostRefill:
+                        // 5s - 0.5s per stage
+                        float refillSec = 5f - 0.5f * stage;
+                        suffix = refillSec.ToString("0.#") + "s";
+                        break;
+                    case AdjusterTarget.Speed:
+                    default:
+                        // Max speed at this stage assuming stock 30-unit boost gap.
+                        // baseCruise=40, +10% per stage, +30 gap, displayMul=2.5
+                        // → max km/h = 175 + 10*stage
+                        int maxKmh = 175 + 10 * stage;
+                        suffix = maxKmh + " KM/H";
+                        break;
+                }
+                percentLabel.text = labelPrefix + ": " + suffix;
             }
         }
     }

@@ -78,16 +78,40 @@ namespace SkyBrawl.Player
             if (other.isTrigger) return;                                   // ignore triggers (HangarTriggerZone etc.)
             if (other.transform.IsChildOf(transform)) return;              // ignore our own hierarchy
 
-            Vector3 closest = other.ClosestPoint(transform.position);
-            Vector3 outward = transform.position - closest;
-            float   dist    = outward.magnitude;
+            Vector3 closest;
+            Vector3 normal;
+            float dist;
 
-            // If ClosestPoint returns our own position, we're INSIDE the collider's bounds.
-            // For a huge non-uniform-scale SphereCollider (e.g. flattened island base) this is a
-            // false-positive: we're not actually touching the visible mesh. Ignore.
-            if (dist < 0.05f) return;
+            // TerrainCollider.ClosestPoint returns the input position (Unity limitation), which
+            // would early-return below. Compute closest point + normal from the heightfield instead.
+            if (other is TerrainCollider tc)
+            {
+                // LandingZone takes over Y management while the plane is on the runway —
+                // skip terrain push-out so it doesn't fight the snap and cause jitter.
+                if (_plane.IgnoreTerrainCollision) return;
+                var terrain = tc.GetComponent<Terrain>();
+                if (terrain == null) return;
+                Vector3 pos = transform.position;
+                float surfaceY = terrain.SampleHeight(pos) + terrain.transform.position.y;
+                float clearance = pos.y - surfaceY;
+                if (clearance >= _hullTrigger.radius) return;  // hull entirely above surface — no overlap
+                closest = new Vector3(pos.x, surfaceY, pos.z);
+                normal = Vector3.up;  // approximate (terrain may be sloped, but Y-up is fine for crash + push-out)
+                dist = Mathf.Max(0f, clearance);
+            }
+            else
+            {
+                closest = other.ClosestPoint(transform.position);
+                Vector3 outward = transform.position - closest;
+                dist = outward.magnitude;
 
-            Vector3 normal  = outward / dist;
+                // If ClosestPoint returns our own position, we're INSIDE the collider's bounds.
+                // For a huge non-uniform-scale SphereCollider (e.g. flattened island base) this is a
+                // false-positive: we're not actually touching the visible mesh. Ignore.
+                if (dist < 0.05f) return;
+                normal = outward / dist;
+            }
+
             float speed     = _plane.State.currentSpeed;
             float impactCos = Vector3.Dot(transform.forward, -normal);
 
@@ -151,6 +175,12 @@ namespace SkyBrawl.Player
             _plane.enabled = true;
             _isCrashing = false;
             _activatedAt = Time.time; // re-arm spawn grace so respawn doesn't instant-crash
+
+            // If the active map has a LandingZone, drop the respawned plane into it landed
+            // and open the hangar — same flow as initial map load. Player resumes at the
+            // runway instead of high above the AirportSpawn.
+            var landing = FindFirstObjectByType<SkyBrawl.Maps.LandingZone>();
+            if (landing != null) landing.ForceLand(_plane);
         }
     }
 }

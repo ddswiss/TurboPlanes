@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: PlaneTuning_default
   m_EditorClassIdentifier: Assembly-CSharp::SkyBrawl.Tuning.PlaneTuningSO
   cruiseSpeed: 40
-  maxSpeed: 80
-  minSpeed: 15
+  maxSpeed: 70
+  minSpeed: 20
   throttleAccel: 25
   pitchRate: 60
   pitchResponsiveness: 0.5
