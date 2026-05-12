@@ -106,7 +106,9 @@ MonoBehaviour:
   hullRadiusMax: 3.5
   hullRadiusScaleStart: 30
   hullRadiusScaleEnd: 70
-  crashSpeedThreshold: 20
+  hullVerticalRadius: 1
+  hullAlignment: {fileID: 0}
+  crashSpeedThreshold: 5
   crashAngleCosThreshold: 0.3
   crashSpeedHigh: 60
   crashAngleCosThresholdHigh: 0.05
@@ -114,6 +116,7 @@ MonoBehaviour:
   crashVelocityScale: 1
   crashTumbleSpin: 360
   spawnGrace: 0.75
+  showHullGizmo: 1
 --- !u!1 &4994268004026394892
 GameObject:
   m_ObjectHideFlags: 0

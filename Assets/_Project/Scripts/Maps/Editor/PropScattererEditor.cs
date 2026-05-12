@@ -44,10 +44,14 @@ namespace SkyBrawl.MapsEditor
                     500f,                       // start raycast well above terrain
                     Mathf.Sin(angle) * dist);
 
+                Vector3 surfaceNormal = Vector3.up;
                 if (s.snapToGround)
                 {
                     if (Physics.Raycast(pos, Vector3.down, out var hit, 5000f, s.groundMask))
+                    {
                         pos = hit.point;
+                        surfaceNormal = hit.normal;
+                    }
                     else
                         pos.y = s.transform.position.y;
                 }
@@ -68,7 +72,17 @@ namespace SkyBrawl.MapsEditor
                     float tz = (float)(rng.NextDouble() * 2.0 - 1.0) * s.maxTilt;
                     rot = Quaternion.Euler(tx, 0f, tz) * rot;
                 }
-                inst.transform.rotation = rot;
+                // Compose with prefab's authored rotation so FBX axis-conversions (e.g. 270° X on Meshy assets) survive.
+                // If alignToSurface, tilt the local-up onto the terrain normal first, then apply random yaw around that.
+                if (s.alignToSurface && s.snapToGround)
+                {
+                    Quaternion align = Quaternion.FromToRotation(Vector3.up, surfaceNormal);
+                    inst.transform.rotation = align * rot * inst.transform.rotation;
+                }
+                else
+                {
+                    inst.transform.rotation = rot * inst.transform.rotation;
+                }
 
                 float sc = Mathf.Lerp(s.scaleRange.x, s.scaleRange.y, (float)rng.NextDouble());
                 inst.transform.localScale = inst.transform.localScale * sc;

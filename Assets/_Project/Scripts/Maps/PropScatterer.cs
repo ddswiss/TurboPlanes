@@ -46,6 +46,9 @@ namespace SkyBrawl.Maps
         [Tooltip("Slight random tilt off vertical (degrees). 0 = perfectly upright.")]
         [Range(0f, 30f)] public float maxTilt = 0f;
 
+        [Tooltip("Align each instance's up axis to the terrain normal at the hit point (only used when Snap To Ground is on). Random yaw still applies around the local-up.")]
+        public bool alignToSurface = false;
+
         [Header("Gizmo")]
         public bool drawGizmo = true;
         public Color gizmoColor = new Color(0.3f, 1f, 0.5f, 0.5f);

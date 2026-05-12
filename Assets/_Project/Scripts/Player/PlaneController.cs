@@ -251,17 +251,20 @@ namespace SkyBrawl.Player
                 float t = Mathf.Clamp01(_barrelRollElapsed / Mathf.Max(0.001f, tuning.barrelRollDuration));
                 float rollOffset = Mathf.Lerp(0f, 360f * _barrelRollDirection, t);
 
-                // Continue the rotation FROM whatever bank we were at when the roll started.
-                _currentBankAngle = _barrelRollStartAngle + rollOffset;
+                // Bank lerps from whatever angle we started at to 0 (horizontal) over the roll.
+                // The 360° rollOffset is added on top, so the visual sees a full barrel roll
+                // while the underlying bank slides back to level — landing horizontal at t=1.
+                float baseBank = Mathf.Lerp(_barrelRollStartAngle, 0f, t);
+                _currentBankAngle = baseBank + rollOffset;
                 if (visualRoot != null)
                     visualRoot.localRotation = Quaternion.Euler(0f, 0f, _currentBankAngle);
 
                 if (_barrelRollElapsed >= tuning.barrelRollDuration)
                 {
                     _mode = FlightMode.Normal;
-                    // End at the start angle (a full 360 lands us visually back where we began).
-                    // This avoids a visible jump if the player is still holding the same direction.
-                    _currentBankAngle = _barrelRollStartAngle;
+                    // Snap to level. _currentBankAngle just hit 360° (visually identical to 0),
+                    // so write 0 explicitly so subsequent banking from input starts from horizontal.
+                    _currentBankAngle = 0f;
                 }
             }
             else
