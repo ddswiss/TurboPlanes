@@ -24,6 +24,14 @@ MonoBehaviour:
   rollResponsiveness: 0.7
   bankTurnFactor: 1
   rollAutoLevel: 0.15
+  diveBoostMinAngle: 30
+  diveBoostDeadzoneEnd: 15
+  diveBoostMaxAngle: 90
+  diveBoostAtMin: 0.8
+  diveBoostAtMax: 15
+  diveBoostAsymptote: 50
+  diveBoostDecay: 3
+  diveBoostDecayClimbMax: 50
   gravity: 4
   liftFromSpeed: 1
   lateralDrag: 4

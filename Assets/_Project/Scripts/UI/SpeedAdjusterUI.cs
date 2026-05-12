@@ -29,8 +29,8 @@ namespace SkyBrawl.UI
         [Header("Config")]
         [Tooltip("Which PlayerProfile field this slider controls.")]
         [SerializeField] private AdjusterTarget target = AdjusterTarget.Speed;
-        [Tooltip("Prefix for the label, e.g. 'Max Speed' -> 'Max Speed: 175 KM/H'.")]
-        [SerializeField] private string labelPrefix = "Speed";
+        [Tooltip("Prefix for the label, e.g. 'Cruise Speed' -> 'Cruise Speed: 100 KM/H'.")]
+        [SerializeField] private string labelPrefix = "Cruise Speed";
         [Tooltip("Max stage this slider allows. Default 10 (full grid). Set lower for limited upgrades — e.g. BoostRefill max 5.")]
         [Range(1, 10)] [SerializeField] private int maxStage = 10;
 
@@ -119,11 +119,10 @@ namespace SkyBrawl.UI
                         break;
                     case AdjusterTarget.Speed:
                     default:
-                        // Max speed at this stage assuming stock 30-unit boost gap.
-                        // baseCruise=40, +10% per stage, +30 gap, displayMul=2.5
-                        // → max km/h = 175 + 10*stage
-                        int maxKmh = 175 + 10 * stage;
-                        suffix = maxKmh + " KM/H";
+                        // Cruise speed at this stage. baseCruise=40 game units, +10% per stage,
+                        // displayMul=2.5 → cruise km/h = 100 + 10*stage (100 at stage 0, 200 at stage 10).
+                        int cruiseKmh = 100 + 10 * stage;
+                        suffix = cruiseKmh + " KM/H";
                         break;
                 }
                 percentLabel.text = labelPrefix + ": " + suffix;

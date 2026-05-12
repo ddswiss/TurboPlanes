@@ -42,6 +42,24 @@ namespace SkyBrawl.Tuning
         [Tooltip("How much the plane auto-levels its roll when no input. 0 = none, 1 = strong.")]
         [Range(0f, 1f)] public float rollAutoLevel = 0.15f;
 
+        [Header("Dive boost (nose-down speed gain)")]
+        [Tooltip("Pitch below horizon (degrees) at which the dive boost starts contributing. Below this, no boost is applied.")]
+        public float diveBoostMinAngle = 30f;
+        [Tooltip("Pitch below horizon (degrees) below diveBoostMinAngle at which the deadzone ends and level decay starts. Between this and diveBoostMinAngle the bonus is preserved (no gain, no decay). Below this (toward level), level decay applies.")]
+        public float diveBoostDeadzoneEnd = 15f;
+        [Tooltip("Pitch below horizon (degrees) at which the dive boost reaches its maximum value. Linear interpolation between min and max angles.")]
+        public float diveBoostMaxAngle = 90f;
+        [Tooltip("Per-second speed gain (units/sec) added to currentSpeed at diveBoostMinAngle.")]
+        public float diveBoostAtMin = 0.8f;
+        [Tooltip("Per-second speed gain (units/sec) added to currentSpeed at diveBoostMaxAngle (straight down). Speed is clamped to maxSpeed.")]
+        public float diveBoostAtMax = 15f;
+        [Tooltip("Asymptote for accumulated diveBonusSpeed (units). Each frame the gain is scaled by (1 - bonus/asymptote), so the bonus approaches this value exponentially but never exceeds it. 50 = plane caps out at +50 units of dive speed.")]
+        public float diveBoostAsymptote = 50f;
+        [Tooltip("Flat decay rate (units/sec) of accumulated diveBonusSpeed when flying level or nose slightly down (not in the dive-boost range). 0 = bonus is permanent.")]
+        public float diveBoostDecay = 3f;
+        [Tooltip("Flat decay rate (units/sec) when the nose is pointed straight up (90 degrees above horizon). Decay interpolates linearly between diveBoostDecay (level) and this value (straight up).")]
+        public float diveBoostDecayClimbMax = 15f;
+
         [Header("Lift / Gravity feel")]
         [Tooltip("Gravity strength. 0 = arcade floaty (no falling), 9.81 = realistic.")]
         public float gravity = 4f;

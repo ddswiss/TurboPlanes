@@ -366,6 +366,7 @@ namespace SkyBrawl.Player
             _state.rotation = rot;
             _state.velocity = Vector3.zero;
             _state.currentSpeed = tuning != null ? tuning.cruiseSpeed : 40f;
+            _state.diveBonusSpeed = 0f;  // clear accumulated dive energy on respawn
             _state.smoothedPitch = 0f;
             _state.smoothedYaw = 0f;
             _state.smoothedRoll = 0f;

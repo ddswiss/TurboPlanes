@@ -5315,7 +5315,7 @@ MonoBehaviour:
   - {fileID: 4233171009751229131}
   percentLabel: {fileID: 8003644560851498490}
   target: 0
-  labelPrefix: Max Speed
+  labelPrefix: Cruise Speed
   maxStage: 10
   filledColor: {r: 0.95, g: 0.85, b: 0.2, a: 1}
   emptyColor: {r: 1, g: 1, b: 1, a: 0.18}
