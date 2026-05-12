@@ -37,6 +37,10 @@ namespace SkyBrawl.CameraRig
         [Tooltip("Duration of the smooth transition from chase pose to orbit pose when RMB is pressed. After this elapses, the camera snaps to the sphere each frame so fast drags trace clean arcs.")]
         [SerializeField] private float pressTransitionDuration = 0.15f;
 
+        [Header("Terrain clearance")]
+        [Tooltip("Minimum vertical clearance the camera keeps above the active terrain — clamps Y to terrain + this value to prevent clipping below ground (e.g. during low-altitude takeoff).")]
+        [SerializeField] private float minTerrainClearance = 1.5f;
+
         // World-space spherical orbit angles, updated by mouse during free look.
         private float _orbitYaw;
         private float _orbitPitch;
@@ -166,6 +170,26 @@ namespace SkyBrawl.CameraRig
                     Quaternion lookRot = Quaternion.LookRotation(lookDir, upRef);
                     transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, rotationLerp * Time.deltaTime);
                 }
+            }
+
+            // --- Terrain clearance clamp ---
+            // Push the camera up if it would otherwise be inside / below the terrain.
+            // Applies in both chase and orbit modes so low-altitude takeoff / low orbits
+            // never render through the ground.
+            ClampAboveTerrain();
+        }
+
+        private void ClampAboveTerrain()
+        {
+            var terrain = Terrain.activeTerrain;
+            if (terrain == null) return;
+            Vector3 p = transform.position;
+            float terrainY = terrain.SampleHeight(p) + terrain.transform.position.y;
+            float floor = terrainY + minTerrainClearance;
+            if (p.y < floor)
+            {
+                p.y = floor;
+                transform.position = p;
             }
         }
 

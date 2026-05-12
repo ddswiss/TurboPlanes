@@ -21,6 +21,13 @@ namespace SkyBrawl.Maps
         [Tooltip("Multiplier applied to the plane's throttleAccel while inside the zone. <1 = slower decel/accel for a longer, more controllable landing roll. 0.4 = ~2.5× slower than normal flight.")]
         [Range(0.1f, 1f)] [SerializeField] private float landingThrottleAccelMul = 0.2f;
 
+        [Header("Tilt safety")]
+        [Tooltip("Max ROLL/BANK degrees (left or right wing tilt) the plane can have inside the zone before triggering an instant crash.")]
+        [Range(0f, 90f)] [SerializeField] private float maxLandingTilt = 60f;
+
+        [Tooltip("Max PITCH degrees (nose up or nose down) the plane can have inside the zone before triggering an instant crash.")]
+        [Range(0f, 90f)] [SerializeField] private float maxLandingPitch = 45f;
+
         [Header("Stop detection")]
         [Tooltip("Speed (game units) below which the plane is considered fully stopped. Hangar opens at this point.")]
         [Range(0f, 2f)] [SerializeField] private float stopSpeedThreshold = 0.10f;
@@ -29,8 +36,11 @@ namespace SkyBrawl.Maps
         [SerializeField] private float takeoffSpeed = 1f / 3.6f;
 
         [Header("Runway snap")]
-        [Tooltip("Vertical clearance added to the spawn Y when pinning the plane to the runway during taxi/takeoff. 0 = sit exactly at spawn Y.")]
-        [SerializeField] private float runwayClearance = 0f;
+        [Tooltip("Vertical clearance added on top of the terrain surface (or spawnPosition.y as a fallback) when pinning the plane to the runway. Should match the plane's hull radius so terrain push-out lines up with the snap and there's no teleport when the constraint releases at speed >= 15.")]
+        [SerializeField] private float runwayClearance = 2.5f;
+
+        [Tooltip("Max speed (m/s) the plane glides toward the runway-Y target when the snap is engaged. Higher = snappier, lower = smoother glide. Used by Mathf.MoveTowards on Y.")]
+        [SerializeField] private float runwaySnapSpeed = 6f;
 
         [Header("Spawn pose (used by GameManager when entering the map and when the hangar closes)")]
         [Tooltip("World position the plane is teleported to when entering the map (lands in hangar) and when the hangar closes (taxi start of runway).")]
@@ -75,6 +85,9 @@ namespace SkyBrawl.Maps
         {
             var pc = other.GetComponentInParent<PlaneController>();
             if (pc == null || pc.Tuning == null) return;
+            // If a different plane than we previously tracked enters (swap-plane in hangar),
+            // reset our saved-state so the new plane gets a fresh tuning capture + override.
+            if (pc != _plane) _savedActive = false;
             _plane = pc;
             _planeInside = true;
 
@@ -96,11 +109,30 @@ namespace SkyBrawl.Maps
             if (!_planeInside || _plane == null) return;
             if (_plane.IsLanded) return;  // already landed; idle until hangar closes
 
-            // Constrain Y to runway only when the plane is actually below its NORMAL minSpeed —
-            // i.e. when the player is actively using the override to land/taxi/take off.
-            // Above that, let physics handle the fly-through naturally so passing the zone
-            // at speed doesn't yank the plane onto the strip.
-            if (_plane.State.currentSpeed < _savedMinSpeed)
+            // Roll check (banking) — uses CurrentBankAngle (visual) since the flight model
+            // itself doesn't roll the logical transform.
+            float rollDeg  = Mathf.Abs(_plane.CurrentBankAngle);
+            // Pitch check (nose up/down) — derived from the logical forward vector's Y
+            // component. forward.y = sin(pitch), so asin gives the pitch angle in radians.
+            float pitchDeg = Mathf.Abs(Mathf.Asin(Mathf.Clamp(_plane.transform.forward.y, -1f, 1f)) * Mathf.Rad2Deg);
+            if (rollDeg > maxLandingTilt || pitchDeg > maxLandingPitch)
+            {
+                var crash = _plane.GetComponent<SkyBrawl.Player.PlaneCrashHandler>();
+                if (crash != null) crash.TriggerCrash();
+                return;  // skip everything else this tick — plane is being respawned
+            }
+
+            // Couple Y-constraint AND terrain-collision-ignore to the steering-lock state.
+            //
+            //   Locked (currentSpeed < 15): plane is "on the runway". Pin Y to the runway,
+            //     ignore terrain push-out (otherwise it'd fight the snap and cause jitter).
+            //
+            //   Unlocked (currentSpeed >= 15): plane has lift-off speed. Release Y so the
+            //     player can climb out by pressing pitch. Re-enable terrain collision so
+            //     the plane can't sneak through the ground by pitching down.
+            bool grounded = _plane.IsSteeringLocked;
+            _plane.IgnoreTerrainCollision = grounded;
+            if (grounded)
             {
                 ConstrainToRunwayY();
             }
@@ -117,19 +149,48 @@ namespace SkyBrawl.Maps
             var pc = other.GetComponentInParent<PlaneController>();
             if (pc == null || pc != _plane) return;
 
+            // If the plane left the zone below the steering-lock threshold (default 15
+            // game units), that means it taxied/drifted out instead of taking off properly
+            // — count as a crash. Skip the check while IsLanded is true (plane is being
+            // teleported during respawn, not actually flying).
+            bool tooSlow = pc.IsSteeringLocked && !pc.IsLanded;
+
             RestoreTuning();
             pc.IgnoreTerrainCollision = false;
             _planeInside = false;
+
+            if (tooSlow)
+            {
+                var crash = pc.GetComponent<SkyBrawl.Player.PlaneCrashHandler>();
+                if (crash != null) crash.TriggerCrash();
+            }
         }
 
         private void ConstrainToRunwayY()
         {
             if (_plane == null) return;
-            // Pin the plane to the spawn Y (which represents the runway surface) plus the
-            // configured clearance. ConstrainGroundY only touches Y — XZ velocity from the
-            // flight model is preserved so the plane keeps rolling forward along the strip
-            // while gravity is neutralized.
-            _plane.ConstrainGroundY(spawnPosition.y + runwayClearance);
+            // Target = terrain surface + clearance. Matches what PlaneCrashHandler's
+            // terrain push-out would settle on, so when the constraint releases at
+            // currentSpeed >= 15 there's no Y teleport. Falls back to spawnPosition.y if
+            // no terrain is in the scene.
+            float targetY;
+            var terrain = Terrain.activeTerrain;
+            if (terrain != null)
+            {
+                Vector3 p = _plane.transform.position;
+                float terrainY = terrain.SampleHeight(p) + terrain.transform.position.y;
+                targetY = terrainY + runwayClearance;
+            }
+            else
+            {
+                targetY = spawnPosition.y + runwayClearance;
+            }
+            // Smooth move instead of hard snap — avoids the visible teleport when the
+            // plane crosses the speed-15 boundary or first touches the runway.
+            float curY = _plane.transform.position.y;
+            float maxStep = runwaySnapSpeed * Time.fixedDeltaTime;
+            float newY = Mathf.MoveTowards(curY, targetY, maxStep);
+            _plane.ConstrainGroundY(newY);
         }
 
         private void Land()
@@ -159,6 +220,10 @@ namespace SkyBrawl.Maps
         public void ForceLand(PlaneController pc)
         {
             if (pc == null || pc.Tuning == null) return;
+            // If this is a different plane than we last tracked (swap-plane in hangar),
+            // reset our saved-state so the override is re-applied to the new plane's
+            // fresh tuning values.
+            if (pc != _plane) _savedActive = false;
             _plane = pc;
             _planeInside = true;
 

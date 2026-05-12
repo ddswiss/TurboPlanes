@@ -105,6 +105,11 @@ namespace SkyBrawl.Player
         public FlightState State => _state;
         public PlaneTuningSO Tuning => tuning;
 
+        /// <summary>Visual bank/roll angle in degrees (cosmetic — the flight model itself
+        /// doesn't roll, banking is shown by tilting the visual mesh). Positive = banked
+        /// one direction, negative = the other. LandingZone reads this for its tilt crash.</summary>
+        public float CurrentBankAngle => _currentBankAngle;
+
         /// <summary>While true, all flight physics & input are paused. Set by LandingZone
         /// when the plane has stopped on the runway. Cleared on takeoff.</summary>
         public bool IsLanded { get; set; }
@@ -122,7 +127,11 @@ namespace SkyBrawl.Player
             _state.position = pos;
             _state.rotation = rot;
             _state.velocity = Vector3.zero;
-            if (_rb != null) _rb.position = pos;
+            if (_rb != null)
+            {
+                _rb.position = pos;
+                _rb.rotation = rot;  // sync rb rotation too — otherwise interpolation lags from a stale rb.rotation when FixedUpdate is suppressed (e.g. IsLanded=true on first spawn)
+            }
         }
 
         /// <summary>Constrain the plane's Y to a runway surface without touching XZ — preserves

@@ -23,11 +23,23 @@ namespace SkyBrawl.Player
         [Tooltip("Radius of the hull trigger collider that auto-spawns if missing.")]
         [SerializeField] private float hullRadius = 4f;
 
+        [Header("Speed-scaled hull")]
+        [Tooltip("Maximum hull radius (used at speeds >= hullRadiusScaleEnd, and as the solid radius during the ragdoll tumble). Bigger = more aggressive crash detection at high speed and more reliable terrain collision while tumbling.")]
+        [SerializeField] private float hullRadiusMax = 5f;
+        [Tooltip("Below this speed (game units), hull radius stays at the base hullRadius — keeps runway taxi/takeoff alignment correct.")]
+        [SerializeField] private float hullRadiusScaleStart = 30f;
+        [Tooltip("At this speed (and above), hull radius reaches hullRadiusMax.")]
+        [SerializeField] private float hullRadiusScaleEnd = 70f;
+
         [Header("Crash thresholds")]
-        [Tooltip("Above this speed (game units), an aligned impact is considered a crash.")]
-        [SerializeField] private float crashSpeedThreshold = 30f;
-        [Tooltip("dot(forward, -normal) above this is considered head-on enough to crash. 1 = pure head-on, 0 = perpendicular.")]
-        [Range(0f, 1f)] [SerializeField] private float crashAngleCosThreshold = 0.4f;
+        [Tooltip("Above this speed (game units), an impact at the lenient angle threshold is a crash.")]
+        [SerializeField] private float crashSpeedThreshold = 20f;
+        [Tooltip("Min cos(angle between forward and -normal) needed to count a hit as head-on AT crashSpeedThreshold. Higher = stricter (must be more head-on). 1 = perfectly head-on, 0 = perpendicular slide.")]
+        [Range(0f, 1f)] [SerializeField] private float crashAngleCosThreshold = 0.30f;
+        [Tooltip("At this speed (and above), the angle threshold relaxes to crashAngleCosThresholdHigh — high-speed impacts crash at much shallower angles, no matter the impact direction.")]
+        [SerializeField] private float crashSpeedHigh = 60f;
+        [Tooltip("Min cos(angle) at speeds >= crashSpeedHigh. Lower = even glancing high-speed hits count as crash. 0 = anything counts.")]
+        [Range(0f, 1f)] [SerializeField] private float crashAngleCosThresholdHigh = 0.05f;
 
         [Header("Ragdoll + Respawn")]
         [Tooltip("How many seconds to tumble before respawning the plane.")]
@@ -71,6 +83,18 @@ namespace SkyBrawl.Player
             _activatedAt = Time.time;
         }
 
+        private void Update()
+        {
+            // Don't fight the ragdoll-mode radius set in CrashAndRespawn while a crash is in progress.
+            if (_isCrashing || _hullTrigger == null || _plane == null) return;
+
+            // Speed-scaled hull radius: small at runway / low speeds (preserves taxi alignment),
+            // grows toward hullRadiusMax as the plane reaches top speed (catches grazing impacts).
+            float speed = _plane.State.currentSpeed;
+            float t = Mathf.InverseLerp(hullRadiusScaleStart, hullRadiusScaleEnd, speed);
+            _hullTrigger.radius = Mathf.Lerp(hullRadius, hullRadiusMax, t);
+        }
+
         private void OnTriggerStay(Collider other)
         {
             if (_isCrashing) return;
@@ -96,7 +120,15 @@ namespace SkyBrawl.Player
                 float clearance = pos.y - surfaceY;
                 if (clearance >= _hullTrigger.radius) return;  // hull entirely above surface — no overlap
                 closest = new Vector3(pos.x, surfaceY, pos.z);
-                normal = Vector3.up;  // approximate (terrain may be sloped, but Y-up is fine for crash + push-out)
+
+                // Use the ACTUAL terrain surface normal (not Vector3.up) so flying horizontally
+                // into a slope counts as a head-on crash. Without this, dot(forward, -up) ≈ 0
+                // and the plane just "drives up" inclines no matter how fast.
+                var td = terrain.terrainData;
+                Vector3 tPos = terrain.transform.position;
+                float u = Mathf.Clamp01((pos.x - tPos.x) / td.size.x);
+                float v = Mathf.Clamp01((pos.z - tPos.z) / td.size.z);
+                normal = td.GetInterpolatedNormal(u, v);
                 dist = Mathf.Max(0f, clearance);
             }
             else
@@ -115,7 +147,12 @@ namespace SkyBrawl.Player
             float speed     = _plane.State.currentSpeed;
             float impactCos = Vector3.Dot(transform.forward, -normal);
 
-            bool isHard = speed > crashSpeedThreshold && impactCos > crashAngleCosThreshold;
+            // Speed-scaled angle threshold: at low speed (>= crashSpeedThreshold) the
+            // angle requirement is lenient; as speed climbs toward crashSpeedHigh, the
+            // threshold drops so even shallow glancing hits crash.
+            float t = Mathf.InverseLerp(crashSpeedThreshold, crashSpeedHigh, speed);
+            float effectiveCos = Mathf.Lerp(crashAngleCosThreshold, crashAngleCosThresholdHigh, t);
+            bool isHard = speed > crashSpeedThreshold && impactCos > effectiveCos;
             if (isHard)
             {
                 StartCoroutine(CrashAndRespawn());
@@ -132,6 +169,14 @@ namespace SkyBrawl.Player
             }
         }
 
+        /// <summary>External trigger for a crash + respawn (e.g. LandingZone tilt check).
+        /// No-op if a crash is already in progress.</summary>
+        public void TriggerCrash()
+        {
+            if (_isCrashing) return;
+            StartCoroutine(CrashAndRespawn());
+        }
+
         private IEnumerator CrashAndRespawn()
         {
             _isCrashing = true;
@@ -142,6 +187,10 @@ namespace SkyBrawl.Player
             // CRITICAL: switch the hull collider to a NON-trigger so the dynamic rigidbody
             // physically collides with terrain (mesas, island, ocean). While it's a trigger,
             // the ragdoll falls through everything.
+            // Also inflate to the maximum hull radius for the tumble — the small detection
+            // radius used in slow flight (e.g. 1.54) is too small for a fast tumbling
+            // rigidbody to reliably collide with the terrain heightfield (tunneling).
+            _hullTrigger.radius = Mathf.Max(hullRadius, hullRadiusMax);
             _hullTrigger.isTrigger = false;
 
             // Disable flight control and switch to dynamic physics for the tumble
@@ -168,7 +217,9 @@ namespace SkyBrawl.Player
             _rb.isKinematic = true;
             _rb.useGravity  = false;
 
-            // Back to trigger mode for flight-time detection
+            // Back to trigger mode for flight-time detection. Restore the (smaller) detection
+            // radius too — we only inflated it for the ragdoll tumble.
+            _hullTrigger.radius = hullRadius;
             _hullTrigger.isTrigger = true;
 
             _plane.RespawnAt(pos, rot);

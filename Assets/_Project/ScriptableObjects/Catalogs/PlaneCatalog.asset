@@ -14,3 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkyBrawl.Planes.PlaneCatalog
   planes:
   - {fileID: 11400000, guid: 90547dc3358cb5449820446f55fe389f, type: 2}
+  - {fileID: 11400000, guid: 548d4b1f48c7412439fb6ef47ed177b0, type: 2}
+  - {fileID: 11400000, guid: cc149a5b5d78bee4aa7676e220ece83d, type: 2}
+  - {fileID: 11400000, guid: b9dc8375faf04f64ab2da4d1848ebe4e, type: 2}
+  - {fileID: 11400000, guid: de40254d4b1f60d429adc76d5b87776a, type: 2}
+  - {fileID: 11400000, guid: d580685d5dac6b54381ecf89c116a7b5, type: 2}
+  - {fileID: 11400000, guid: cea7935144ec6f74ca6b627bf0d3a7ca, type: 2}
