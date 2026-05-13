@@ -182,10 +182,10 @@ namespace SkyBrawl.Core
 
             // TODO: apply runtime tuning clone with upgrades.
 
-            // Apply speed + boost upgrades to the freshly cloned tuning SO (PlaneController.Awake
-            // instantiates its own copy so this doesn't mutate the asset).
-            ApplySpeedAndBoostUpgradesToActivePlane(Profile.speedStage, Profile.boostStage);
-            ApplyBoostUpgradesToActivePlane(Profile.boostDurationStage, Profile.boostRefillStage);
+            // Apply upgrades from the selected plane's PlaneSaveData (upgrades are per-plane now).
+            var pd0 = Profile.GetOrCreatePlaneData(Profile.selectedPlaneId);
+            ApplySpeedAndBoostUpgradesToActivePlane(pd0.speedStage, pd0.boostStage);
+            ApplyBoostUpgradesToActivePlane(pd0.boostDurationStage, pd0.boostRefillStage);
 
             // Apply the saved color for this plane to the freshly spawned instance.
             var saveData = Profile.GetOrCreatePlaneData(Profile.selectedPlaneId);
@@ -241,8 +241,10 @@ namespace SkyBrawl.Core
         /// Called by UI sliders so changes take effect immediately, not just on next respawn.</summary>
         public void RefreshActivePlaneUpgrades()
         {
-            ApplySpeedAndBoostUpgradesToActivePlane(Profile.speedStage, Profile.boostStage);
-            ApplyBoostUpgradesToActivePlane(Profile.boostDurationStage, Profile.boostRefillStage);
+            if (Profile == null || string.IsNullOrEmpty(Profile.selectedPlaneId)) return;
+            var pd = Profile.GetOrCreatePlaneData(Profile.selectedPlaneId);
+            ApplySpeedAndBoostUpgradesToActivePlane(pd.speedStage, pd.boostStage);
+            ApplyBoostUpgradesToActivePlane(pd.boostDurationStage, pd.boostRefillStage);
         }
 
         public void SetSelectedPlane(string planeId)
@@ -254,6 +256,8 @@ namespace SkyBrawl.Core
             Profile.Save();
             // Re-spawn at the airport with the new prefab (re-applies color too).
             SpawnSelectedPlane();
+            // Notify hangar UI (upgrades / preview / name / skill points display).
+            SkyBrawl.UI.HangarEvents.RaisePlaneChanged();
         }
 
         public void SetSelectedColor(Color color)

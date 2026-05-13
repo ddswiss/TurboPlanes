@@ -1,0 +1,283 @@
+/* TurboPlanes Hangar — sprite-driven layout using the new artwork:
+   Hangar_Background, Hangar_Logo, Plane_Background_Panel, Upgrade_Background_Panel,
+   Upgrade_Active / Upgrade_Inactive / Upgrade_unavailable.
+   The two side panels already have "PLANE" / "UPGRADES" headers baked into the sprite,
+   so the previous subtitle-plate element is no longer needed. */
+
+:root {
+    --yellow:        rgb(255, 206, 32);
+    --yellow-light:  rgb(255, 246, 105);
+    --red:           rgb(222, 32, 24);
+    --red-dark:      rgb(105, 12, 14);
+    --blue:          rgb(0, 128, 236);
+    --blue-dark:     rgb(2, 21, 48);
+    --cyan:          rgb(56, 204, 255);
+    --white:         rgb(255, 255, 255);
+    --black:         rgb(5, 7, 14);
+}
+
+.hangar-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* ===== Background ===== */
+.hangar-bg {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-image: url("project://database/Assets/_Project/UI/Hangar_Background.png");
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.dim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* ===== HANGAR logo banner ===== */
+.hangar-banner {
+    position: absolute;
+    top: 14px;
+    width: 620px;
+    height: 140px;
+    background-image: url("project://database/Assets/_Project/UI/Hangar_Logo.png");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.skill-points {
+    position: absolute;
+    top: 30px;
+    right: 38px;
+    padding: 10px 18px;
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--yellow-light);
+    background-color: rgba(0, 24, 64, 0.75);
+    border-radius: 12px;
+    border-width: 3px;
+    border-color: var(--cyan);
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: var(--black);
+}
+
+/* ===== Two-column body — stretched to ~90% of screen width ===== */
+.body {
+    position: absolute;
+    top: 170px;
+    left: 5%;
+    right: 5%;
+    bottom: 100px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: stretch;
+}
+
+/* ===== LEFT panel (PLANE) — flex-grows to fill its half of the body ===== */
+.plane-panel {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 24px;
+    /* Top padding leaves room for the baked-in PLANE title tab on the sprite. */
+    padding: 130px 36px 90px 36px;
+    align-items: center;
+    background-image: url("project://database/Assets/_Project/UI/Plane_Background_Panel.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-scale: 0.5;
+}
+
+.preview-frame {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0);
+}
+.plane-preview {
+    width: 100%;
+    height: 100%;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* RED BARON name plate — no sprite for this one, styled with CSS. */
+.plane-name-plate {
+    width: 95%;
+    height: 78px;
+    margin-top: 18px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--white);
+    border-radius: 12px;
+    border-width: 5px;
+    border-color: var(--cyan);
+}
+.plane-name {
+    font-size: 38px;
+    -unity-font-style: bold;
+    color: var(--blue-dark);
+    letter-spacing: 2px;
+    -unity-text-align: middle-center;
+}
+
+/* Side arrows — no sprite for this either, styled red triangle buttons. */
+.arrow-btn {
+    position: absolute;
+    top: 50%;
+    width: 60px;
+    height: 80px;
+    margin-top: -40px;
+    background-color: var(--red);
+    color: var(--white);
+    font-size: 36px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    padding: 0;
+    border-width: 4px;
+    border-color: var(--white);
+    border-radius: 12px;
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: var(--black);
+}
+.arrow-btn:hover    { scale: 1.07 1.07; }
+.arrow-btn:disabled { opacity: 0.35; }
+.arrow-left  { left:  -24px; }
+.arrow-right { right: -24px; }
+
+/* Page dots */
+.dots {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    height: 30px;
+}
+.dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    margin: 0 10px;
+    background-color: rgb(32, 36, 44);
+    border-width: 3px;
+    border-color: var(--white);
+}
+.dot.active {
+    background-color: var(--yellow);
+    border-color: var(--white);
+}
+
+/* ===== RIGHT panel (UPGRADES) — flex-grows to fill its half of the body ===== */
+.upgrades-panel {
+    flex-grow: 1;
+    flex-basis: 0;
+    padding: 130px 42px 36px 42px;
+    background-image: url("project://database/Assets/_Project/UI/Upgrade_Background_Panel.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-scale: 0.5;
+}
+.upgrades-list {
+    flex-grow: 1;
+    justify-content: space-between;
+}
+.upgrade-row {
+    padding-bottom: 4px;
+}
+.upgrade-label {
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: var(--white);
+    margin-bottom: 6px;
+    -unity-text-outline-width: 3px;
+    -unity-text-outline-color: var(--black);
+}
+.upgrade-row-controls {
+    flex-direction: row;
+    align-items: center;
+    height: 50px;
+}
+.squares {
+    flex-grow: 1;
+    height: 60px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: stretch;
+}
+
+/* Each .square gets a sprite per state. C# applies .owned / .locked.
+   flex-grow + flex-basis:0 makes all 10 slots split the container width equally,
+   so they stretch to fill the row regardless of panel size. */
+.square {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 0;
+    height: 60px;
+    margin: 0 3px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: url("project://database/Assets/_Project/UI/Upgrade_Inactive.png");
+    -unity-background-scale-mode: scale-to-fit;
+    align-items: center;
+    justify-content: center;
+}
+.square.owned {
+    background-image: url("project://database/Assets/_Project/UI/Upgrade_Active.png");
+}
+.square.locked {
+    background-image: url("project://database/Assets/_Project/UI/Upgrade_unavailable.png");
+}
+/* Lightning bolt is part of the sprite already — hide the ⚡ Label the controller adds. */
+.square-glyph { display: none; }
+
+/* Step buttons remain functional but visually small. */
+.upgrade-step-btn {
+    width: 26px;
+    height: 42px;
+    margin: 0 6px;
+    padding: 0;
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--white);
+    background-color: rgba(0, 55, 130, 0.55);
+    border-width: 2px;
+    border-color: var(--cyan);
+    border-radius: 7px;
+}
+.upgrade-step-btn:hover    { background-color: var(--blue); scale: 1.05 1.05; }
+.upgrade-step-btn:disabled { opacity: 0.25; }
+
+/* ===== Footer — temporary LEAVE HANGAR button, centered bottom ===== */
+.footer {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 18px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+}
+.footer-btn {
+    /* Default invisible — only `.quit-btn` overrides this. */
+    width: 1px; height: 1px; padding: 0; margin: 0; opacity: 0;
+}
+.quit-btn {
+    width: auto;
+    height: 56px;
+    padding: 0 36px;
+    margin: 0 8px;
+    opacity: 1;
+    background-color: var(--red);
+    color: var(--white);
+    border-width: 4px;
+    border-color: var(--white);
+    border-radius: 12px;
+    font-size: 22px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: var(--black);
+}
+.quit-btn:hover  { background-color: var(--red-dark); scale: 1.05 1.05; }
+.quit-btn:active { scale: 0.98 0.98; }

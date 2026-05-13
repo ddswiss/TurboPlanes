@@ -1,0 +1,109 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <!-- Drop this UXML next to the matching USS, or change this path back to Assets/_Project/UI/Hangar.uss if you replace the original file. -->
+    <Style src="project://database/Assets/_Project/UI/Hangar_Arcade.uss" />
+
+    <ui:VisualElement name="hangar-root" class="hangar-root" picking-mode="Position">
+        <!-- Wooden hangar interior background -->
+        <ui:VisualElement name="hangar-bg" class="hangar-bg" picking-mode="Ignore">
+            <ui:VisualElement class="back-wall" />
+            <ui:VisualElement class="floor" />
+            <ui:VisualElement class="beam beam-left" />
+            <ui:VisualElement class="beam beam-right" />
+            <ui:VisualElement class="rafter rafter-left" />
+            <ui:VisualElement class="rafter rafter-right" />
+            <ui:VisualElement class="lamp lamp-left">
+                <ui:VisualElement class="lamp-glow" />
+            </ui:VisualElement>
+            <ui:VisualElement class="lamp lamp-right">
+                <ui:VisualElement class="lamp-glow" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Keep dim for compatibility; styled as a warm vignette instead of a black overlay. -->
+        <ui:VisualElement name="dim" class="dim" picking-mode="Ignore" />
+
+        <!-- Header banner -->
+        <ui:VisualElement name="hangar-banner" class="hangar-banner">
+            <ui:VisualElement class="banner-wing banner-wing-left" />
+            <ui:VisualElement class="banner-wing banner-wing-right" />
+            <ui:Label text="HANGAR" class="hangar-title" />
+        </ui:VisualElement>
+
+        <ui:Label text="Skill Points: 20" name="skill-points" class="skill-points" />
+
+        <ui:VisualElement name="body" class="body">
+            <!-- LEFT: plane selector -->
+            <ui:VisualElement name="plane-panel" class="plane-panel arcade-panel">
+                <ui:VisualElement class="subtitle-plate">
+                    <ui:Label text="PLANE" class="subtitle-text" />
+                </ui:VisualElement>
+
+                <ui:VisualElement name="preview-frame" class="preview-frame">
+                    <ui:VisualElement class="preview-glow" picking-mode="Ignore" />
+                    <ui:VisualElement name="plane-preview" class="plane-preview" />
+                    <ui:VisualElement class="preview-floor-ring" picking-mode="Ignore" />
+                </ui:VisualElement>
+
+                <ui:Button name="prev-btn" text="◀" class="arrow-btn arrow-left" />
+                <ui:Button name="next-btn" text="▶" class="arrow-btn arrow-right" />
+
+                <ui:VisualElement class="plane-name-plate">
+                    <ui:Label text="PLANE NAME" name="plane-name" class="plane-name" />
+                </ui:VisualElement>
+
+                <ui:VisualElement name="dots" class="dots" />
+            </ui:VisualElement>
+
+            <!-- RIGHT: upgrades -->
+            <ui:VisualElement name="upgrades-panel" class="upgrades-panel arcade-panel">
+                <ui:VisualElement class="subtitle-plate upgrades-title-plate">
+                    <ui:Label text="UPGRADES" class="subtitle-text" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="upgrades-list">
+                    <ui:VisualElement name="upgrade-speed" class="upgrade-row">
+                        <ui:Label text="Cruise Speed" class="upgrade-label" />
+                        <ui:VisualElement class="upgrade-row-controls">
+                            <ui:Button text="−" class="upgrade-step-btn minus-btn" />
+                            <ui:VisualElement class="squares" />
+                            <ui:Button text="+" class="upgrade-step-btn plus-btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="upgrade-boost" class="upgrade-row">
+                        <ui:Label text="Boost Gain" class="upgrade-label" />
+                        <ui:VisualElement class="upgrade-row-controls">
+                            <ui:Button text="−" class="upgrade-step-btn minus-btn" />
+                            <ui:VisualElement class="squares" />
+                            <ui:Button text="+" class="upgrade-step-btn plus-btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="upgrade-duration" class="upgrade-row">
+                        <ui:Label text="Max Boost" class="upgrade-label" />
+                        <ui:VisualElement class="upgrade-row-controls">
+                            <ui:Button text="−" class="upgrade-step-btn minus-btn" />
+                            <ui:VisualElement class="squares" />
+                            <ui:Button text="+" class="upgrade-step-btn plus-btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="upgrade-refill" class="upgrade-row">
+                        <ui:Label text="Boost Refill Speed" class="upgrade-label" />
+                        <ui:VisualElement class="upgrade-row-controls">
+                            <ui:Button text="−" class="upgrade-step-btn minus-btn" />
+                            <ui:VisualElement class="squares" />
+                            <ui:Button text="+" class="upgrade-step-btn plus-btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Kept for existing C# bindings. Style hides it by default because the screenshot has no footer buttons. -->
+        <ui:VisualElement name="footer" class="footer">
+            <ui:Button name="close-btn" text="CLOSE" class="footer-btn" />
+            <ui:Button name="quit-btn" text="QUIT TO MENU" class="footer-btn quit-btn" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

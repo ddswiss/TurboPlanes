@@ -1,0 +1,449 @@
+/* TurboPlanes Hangar UI — arcade/comic style matching the generated reference.
+   Keeps the original element names/classes so HangarUIDocument.cs continues to work. */
+
+:root {
+    --yellow: rgb(255, 206, 32);
+    --yellow-light: rgb(255, 246, 105);
+    --orange: rgb(255, 137, 0);
+    --red: rgb(222, 32, 24);
+    --red-dark: rgb(105, 12, 14);
+    --blue: rgb(0, 128, 236);
+    --blue-dark: rgb(2, 21, 48);
+    --blue-mid: rgb(7, 69, 142);
+    --cyan: rgb(56, 204, 255);
+    --white: rgb(255,255,255);
+    --black: rgb(5, 7, 14);
+    --silver: rgb(155, 160, 168);
+    --silver-dark: rgb(69, 74, 83);
+    --wood: rgb(135, 74, 30);
+    --wood-dark: rgb(74, 36, 13);
+}
+
+.hangar-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    min-width: 1280px;
+    min-height: 720px;
+    align-items: center;
+    overflow: hidden;
+    background-color: rgb(92, 48, 20);
+}
+
+/* ---------- warm wooden hangar background ---------- */
+.hangar-bg {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgb(112, 62, 26);
+}
+.back-wall {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 170px;
+    background-color: rgb(127, 69, 28);
+    border-bottom-width: 7px;
+    border-bottom-color: rgb(79, 40, 15);
+}
+.floor {
+    position: absolute;
+    left: 0; right: 0; bottom: 0; height: 230px;
+    background-color: rgb(151, 83, 33);
+    border-top-width: 6px;
+    border-top-color: rgb(96, 47, 15);
+}
+.beam {
+    position: absolute;
+    top: -40px;
+    width: 90px;
+    height: 840px;
+    background-color: rgb(88, 43, 15);
+    border-width: 4px;
+    border-color: rgb(46, 22, 8);
+}
+.beam-left { left: 62px; }
+.beam-right { right: 62px; }
+.rafter {
+    position: absolute;
+    top: -20px;
+    width: 980px;
+    height: 55px;
+    background-color: rgb(92, 43, 14);
+    border-width: 4px;
+    border-color: rgb(50, 23, 7);
+}
+.rafter-left { left: -220px; }
+.rafter-right { right: -220px; }
+.lamp {
+    position: absolute;
+    top: 44px;
+    width: 96px;
+    height: 72px;
+    background-color: rgb(31, 39, 48);
+    border-width: 4px;
+    border-color: rgb(9, 13, 18);
+    border-radius: 24px;
+    align-items: center;
+    justify-content: center;
+}
+.lamp-left { left: 175px; }
+.lamp-right { right: 175px; }
+.lamp-glow {
+    width: 56px;
+    height: 36px;
+    border-radius: 18px;
+    background-color: rgb(255, 231, 129);
+}
+.dim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.12);
+}
+
+/* ---------- header ---------- */
+.hangar-banner {
+    position: absolute;
+    top: 18px;
+    width: 560px;
+    height: 116px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--red);
+    border-radius: 20px;
+    border-width: 7px;
+    border-color: var(--white);
+    padding-bottom: 6px;
+    -unity-text-align: middle-center;
+}
+.hangar-banner:before {
+    position: absolute;
+    left: -7px; top: -7px; right: -7px; bottom: -7px;
+    border-width: 5px;
+    border-color: var(--black);
+    border-radius: 24px;
+}
+.banner-wing {
+    position: absolute;
+    top: 29px;
+    width: 110px;
+    height: 60px;
+    background-color: var(--blue);
+    border-width: 5px;
+    border-color: var(--black);
+    border-radius: 12px;
+}
+.banner-wing-left { left: -96px; }
+.banner-wing-right { right: -96px; }
+.hangar-title {
+    font-size: 64px;
+    -unity-font-style: bold;
+    color: var(--yellow-light);
+    letter-spacing: 5px;
+    -unity-text-outline-width: 4px;
+    -unity-text-outline-color: var(--red-dark);
+}
+.skill-points {
+    position: absolute;
+    top: 26px;
+    right: 38px;
+    padding: 10px 18px;
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--yellow-light);
+    background-color: rgba(0, 24, 64, 0.70);
+    border-radius: 12px;
+    border-width: 3px;
+    border-color: var(--cyan);
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: var(--black);
+}
+
+/* ---------- layout ---------- */
+.body {
+    position: absolute;
+    top: 155px;
+    left: 74px;
+    right: 74px;
+    bottom: 55px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+}
+.arcade-panel {
+    background-color: var(--blue-dark);
+    border-width: 7px;
+    border-color: var(--white);
+    border-radius: 18px;
+}
+.arcade-panel:before {
+    position: absolute;
+    left: 6px; top: 6px; right: 6px; bottom: 6px;
+    border-width: 6px;
+    border-color: var(--cyan);
+    border-radius: 12px;
+}
+.arcade-panel:after {
+    position: absolute;
+    left: -12px; top: -12px; right: -12px; bottom: -12px;
+    border-width: 5px;
+    border-color: var(--black);
+    border-radius: 23px;
+}
+
+.subtitle-plate {
+    position: absolute;
+    top: -42px;
+    left: 50%;
+    width: 260px;
+    height: 72px;
+    margin-left: -130px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--blue);
+    border-width: 5px;
+    border-color: var(--black);
+    border-radius: 12px;
+}
+.subtitle-plate:before {
+    position: absolute;
+    left: 5px; top: 5px; right: 5px; bottom: 5px;
+    border-width: 3px;
+    border-color: var(--cyan);
+    border-radius: 8px;
+}
+.subtitle-text {
+    font-size: 42px;
+    -unity-font-style: bold;
+    color: var(--yellow-light);
+    letter-spacing: 2px;
+    -unity-text-outline-width: 4px;
+    -unity-text-outline-color: var(--black);
+}
+.upgrades-title-plate {
+    width: 335px;
+    margin-left: -167px;
+}
+
+/* ---------- left panel ---------- */
+.plane-panel {
+    width: 520px;
+    margin-right: 48px;
+    padding: 54px 24px 70px 24px;
+    align-items: center;
+}
+.preview-frame {
+    position: relative;
+    width: 455px;
+    height: 355px;
+    margin-top: 6px;
+    overflow: hidden;
+    border-radius: 12px;
+    border-width: 0;
+    background-color: rgb(0, 118, 218);
+    align-items: center;
+    justify-content: center;
+}
+.preview-glow {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgb(12, 130, 238);
+    opacity: 0.78;
+}
+.preview-floor-ring {
+    position: absolute;
+    left: 100px;
+    right: 100px;
+    bottom: 32px;
+    height: 52px;
+    border-radius: 50%;
+    border-width: 5px;
+    border-color: rgba(255, 198, 37, 0.80);
+}
+.plane-preview {
+    width: 100%;
+    height: 100%;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.plane-name-plate {
+    position: absolute;
+    left: 34px;
+    right: 34px;
+    bottom: 24px;
+    height: 78px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--blue);
+    border-width: 5px;
+    border-color: var(--black);
+    border-radius: 10px;
+}
+.plane-name-plate:before {
+    position: absolute;
+    left: 8px; top: 8px; right: 8px; bottom: 8px;
+    border-width: 3px;
+    border-color: var(--cyan);
+    border-radius: 6px;
+}
+.plane-name {
+    font-size: 48px;
+    -unity-font-style: bold;
+    color: var(--white);
+    letter-spacing: 2px;
+    -unity-text-align: middle-center;
+    -unity-text-outline-width: 5px;
+    -unity-text-outline-color: var(--black);
+}
+.arrow-btn {
+    position: absolute;
+    top: 50%;
+    width: 76px;
+    height: 96px;
+    margin-top: -58px;
+    background-color: var(--red);
+    color: var(--white);
+    font-size: 46px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    padding: 0;
+    border-width: 5px;
+    border-color: var(--white);
+    border-radius: 12px;
+    -unity-text-outline-width: 3px;
+    -unity-text-outline-color: var(--black);
+}
+.arrow-btn:hover { scale: 1.07 1.07; }
+.arrow-left { left: -58px; }
+.arrow-right { right: -58px; }
+.dots {
+    position: absolute;
+    left: 0; right: 0; bottom: -50px;
+    height: 34px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+.dot {
+    width: 31px;
+    height: 31px;
+    border-radius: 50%;
+    margin: 0 15px;
+    background-color: rgb(32, 36, 44);
+    border-width: 4px;
+    border-color: var(--white);
+}
+.dot.active {
+    background-color: var(--yellow);
+    border-color: var(--white);
+}
+
+/* ---------- right panel ---------- */
+.upgrades-panel {
+    flex-grow: 1;
+    max-width: 610px;
+    padding: 58px 42px 32px 42px;
+}
+.upgrades-list {
+    flex-grow: 1;
+    justify-content: space-between;
+}
+.upgrade-row {
+    height: 110px;
+    border-bottom-width: 3px;
+    border-bottom-color: rgb(0, 100, 221);
+    padding-bottom: 8px;
+}
+.upgrade-row:last-child {
+    border-bottom-width: 0;
+}
+.upgrade-label {
+    font-size: 33px;
+    -unity-font-style: bold;
+    color: var(--white);
+    margin-bottom: 9px;
+    -unity-text-outline-width: 4px;
+    -unity-text-outline-color: var(--black);
+}
+.upgrade-row-controls {
+    flex-direction: row;
+    align-items: center;
+    height: 46px;
+}
+.squares {
+    flex-grow: 1;
+    height: 48px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+.square {
+    width: 42px;
+    height: 42px;
+    margin-right: 8px;
+    border-radius: 7px;
+    background-color: var(--silver);
+    border-width: 4px;
+    border-color: rgb(230, 235, 241);
+    align-items: center;
+    justify-content: center;
+}
+.square:before {
+    position: absolute;
+    left: 3px; top: 3px; right: 3px; bottom: 3px;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
+}
+.square.owned {
+    background-color: var(--yellow);
+    border-color: rgb(255, 240, 115);
+}
+.square.locked {
+    background-color: var(--silver);
+    border-color: rgb(220, 224, 228);
+    opacity: 0.85;
+}
+.square-glyph {
+    font-size: 25px;
+    -unity-font-style: bold;
+    color: rgba(0, 0, 0, 0.45);
+    -unity-text-align: middle-center;
+}
+.square.owned > .square-glyph {
+    color: rgb(184, 87, 0);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgb(255, 240, 92);
+}
+.square.locked > .square-glyph {
+    color: rgba(0, 0, 0, 0.35);
+}
+
+/* Existing plus/minus buttons remain for functionality but are visually tucked away.
+   They stay clickable at the row edges for keyboard/gamepad/mouse workflows. */
+.upgrade-step-btn {
+    width: 30px;
+    height: 42px;
+    margin-right: 8px;
+    padding: 0;
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--white);
+    background-color: rgba(0, 55, 130, 0.55);
+    border-width: 2px;
+    border-color: var(--cyan);
+    border-radius: 7px;
+}
+.plus-btn { margin-left: 0; margin-right: 0; }
+.upgrade-step-btn:hover { background-color: var(--blue); scale: 1.05 1.05; }
+.upgrade-step-btn:disabled { opacity: 0.25; }
+
+/* Footer is present for C# bindings but hidden to match the reference. */
+.footer {
+    position: absolute;
+    right: 26px;
+    bottom: 18px;
+    flex-direction: row;
+    opacity: 0;
+}
+.footer-btn {
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: 0;
+}

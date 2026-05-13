@@ -15,20 +15,21 @@ namespace SkyBrawl.Persistence
         public string selectedMapId   = "";
         public int currency = 0;
 
-        // Speed upgrade points (0..10). Each point adds +10% to the base cruise speed.
-        // 0 = no upgrade (cruise = base), 10 = +100% (cruise = 2x base).
-        public int speedStage = 0;
-        // Boost upgrade points (0..10). Each point adds +5 game-units to the cruise→max gap.
-        // 0 = stock 30-unit gap, 10 = 80-unit gap (much higher top speed when boosting).
-        public int boostStage = 0;
-        // Boost duration upgrade points (0..8). Default 2s of boost; each point adds +1s.
-        // Max stage 8 → 10s of boost from full bar.
+        // Shared skill points pool. Each upgrade purchase (across any plane) costs 1.
+        // Removing an upgrade refunds 1. Defaults to 20 on a fresh profile.
+        public int skillPoints = 20;
+
+        // === DEPRECATED global stages — kept for backward-compat migration only. ===
+        // Old saves stored upgrades globally; on Load we move them onto the selected plane.
+        // After migration these are zeroed and ignored. Do NOT read these at runtime; use
+        // the per-plane fields on PlaneSaveData instead.
+        public int speedStage         = 0;
+        public int boostStage         = 0;
         public int boostDurationStage = 0;
-        // Boost refill upgrade points (0..5). Default 5s to refill from empty; each point
-        // shaves -0.5s off. Max stage 5 → 2.5s to fully refill.
-        public int boostRefillStage = 0;
+        public int boostRefillStage   = 0;
 
         const string FileName = "profile.json";
+        const int DefaultSkillPoints = 20;
 
         public static string SavePath => Path.Combine(Application.persistentDataPath, FileName);
 
@@ -51,7 +52,11 @@ namespace SkyBrawl.Persistence
                 {
                     var json = File.ReadAllText(SavePath);
                     var profile = JsonUtility.FromJson<PlayerProfile>(json);
-                    if (profile != null) return profile;
+                    if (profile != null)
+                    {
+                        profile.MigrateLegacyGlobalStages();
+                        return profile;
+                    }
                 }
             }
             catch (Exception e) { Debug.LogWarning($"PlayerProfile load failed: {e.Message}"); }
@@ -66,6 +71,27 @@ namespace SkyBrawl.Persistence
                 File.WriteAllText(SavePath, json);
             }
             catch (Exception e) { Debug.LogWarning($"PlayerProfile save failed: {e.Message}"); }
+        }
+
+        /// <summary>One-shot migration: if a legacy save has non-zero global stage fields,
+        /// move them onto the currently-selected plane's save data and zero them out so
+        /// the migration is idempotent. Skill points get a one-time default of 20 too.</summary>
+        private void MigrateLegacyGlobalStages()
+        {
+            bool hasLegacyData = (speedStage + boostStage + boostDurationStage + boostRefillStage) > 0;
+            if (hasLegacyData && !string.IsNullOrEmpty(selectedPlaneId))
+            {
+                var pd = GetOrCreatePlaneData(selectedPlaneId);
+                pd.speedStage         = speedStage;
+                pd.boostStage         = boostStage;
+                pd.boostDurationStage = boostDurationStage;
+                pd.boostRefillStage   = boostRefillStage;
+                speedStage = boostStage = boostDurationStage = boostRefillStage = 0;
+            }
+            // Old saves predate skillPoints (would deserialize as 0). Seed the default once
+            // so existing players get the pool. If a user has actually spent down to 0 in a
+            // newer save, this would re-grant them — acceptable for a small game in early dev.
+            if (skillPoints <= 0) skillPoints = DefaultSkillPoints;
         }
     }
 }

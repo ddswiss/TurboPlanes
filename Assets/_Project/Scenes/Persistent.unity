@@ -229,7 +229,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkyBrawl.Core.GameManager
   mapCatalog: {fileID: 11400000, guid: e1b4cccf974dd4a458bbc1e545b3378f, type: 2}
   planeCatalog: {fileID: 11400000, guid: bc70304363949a44d9cb160315afb1dc, type: 2}
-  hangarCanvasPrefab: {fileID: 4223952124718654507, guid: 4477f27cf59ba11499a25fe65b941921, type: 3}
+  hangarCanvasPrefab: {fileID: 3859644186589317157, guid: a2124056d7259554b8b4b952bb8d1b62, type: 3}
   hudCanvasPrefab: {fileID: 4673406142702011995, guid: ddfff81155845b448a25371260b6bd9f, type: 3}
 --- !u!4 &1085374518
 Transform:
